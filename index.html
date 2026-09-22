@@ -1,0 +1,2716 @@
+<!DOCTYPE html>
+<!--
+LocatorLab
+Author: WenYang
+Copyright © 2026 WenYang. All rights reserved.
+Unauthorized copying, redistribution, or commercial use is prohibited.
+-->
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="author" content="WenYang">
+    <meta name="copyright" content="Copyright © 2026 WenYang. All rights reserved.">
+    <title>LocatorLab — CSS, XPath &amp; Playwright Selector Debugger</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/darcula.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/neo.min.css">
+    <style>
+        :root {
+            --bg-color: #1e1e1e;
+            --panel-bg: #252526;
+            --panel-strong: #2d2d30;
+            --border-color: #333;
+            --text-primary: #cccccc;
+            --text-secondary: #858585;
+            --accent-color: #007acc;
+            --accent-hover: #0098ff;
+            --success-color: #4ec9b0;
+            --error-color: #f48771;
+            --input-bg: #3c3c3c;
+            --font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+            --mono-font: "Consolas", "Monaco", "Courier New", monospace;
+            --elevated-shadow: 0 12px 24px rgba(0, 0, 0, 0.18);
+        }
+
+        [data-theme="light"] {
+            --bg-color: #f3f3f3;
+            --panel-bg: #ffffff;
+            --panel-strong: #f7f7f7;
+            --border-color: #e0e0e0;
+            --text-primary: #333333;
+            --text-secondary: #666666;
+            --accent-color: #0078d4;
+            --accent-hover: #106ebe;
+            --success-color: #008000;
+            --error-color: #d13438;
+            --input-bg: #ffffff;
+            --elevated-shadow: 0 10px 20px rgba(0, 0, 0, 0.08);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            height: 50px;
+            background-color: var(--panel-bg);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .logo {
+            color: var(--accent-color);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+        }
+
+        .header-select,
+        .header-btn {
+            background: transparent;
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .header-select {
+            padding: 2px 6px;
+            margin-right: 10px;
+            font-size: 12px;
+        }
+
+        .header-btn {
+            padding: 2px 8px;
+            margin-right: 12px;
+            font-size: 12px;
+        }
+
+        .version {
+            color: var(--text-secondary);
+            font-size: 12px;
+        }
+
+        main {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .panel {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .panel-left {
+            width: 50%;
+            min-width: 520px;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .panel-right {
+            flex: 1;
+            min-width: 220px;
+            background-color: var(--bg-color);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .resizer {
+            width: 5px;
+            background-color: var(--panel-bg);
+            border-left: 1px solid var(--border-color);
+            border-right: 1px solid var(--border-color);
+            cursor: col-resize;
+            z-index: 10;
+            transition: background-color 0.2s ease;
+            touch-action: none;
+        }
+
+        .resizer:hover,
+        .resizer.resizing {
+            background-color: var(--accent-color);
+            border-color: var(--accent-color);
+        }
+
+        .toolbar {
+            height: 40px;
+            background-color: var(--panel-bg);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            padding: 0 10px;
+            gap: 8px;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            scrollbar-width: none;
+        }
+
+        .toolbar::-webkit-scrollbar {
+            display: none;
+        }
+
+        .btn {
+            background: transparent;
+            border: 1px solid transparent;
+            color: var(--text-primary);
+            padding: 6px 12px;
+            font-size: 12px;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+            font-weight: 600;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .btn:hover {
+            background-color: #3e3e42;
+        }
+
+        [data-theme="light"] .btn:hover {
+            background-color: #f2f6fb;
+        }
+
+        .btn.primary {
+            background-color: var(--accent-color);
+            color: #ffffff;
+        }
+
+        .btn.primary:hover {
+            background-color: var(--accent-hover);
+        }
+
+        .btn.danger {
+            background-color: var(--error-color);
+            color: #ffffff;
+        }
+
+        .btn.danger:hover {
+            background-color: #d13438;
+        }
+
+        .btn-icon {
+            width: 28px;
+            height: 28px;
+            padding: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .toolbar .btn {
+            height: 28px;
+            min-height: 28px;
+            padding: 3px 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            background-color: transparent;
+            color: var(--text-secondary);
+            font-size: 12px;
+            line-height: 1;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .toolbar .btn:hover {
+            border-color: var(--accent-color);
+            color: var(--text-primary);
+            background-color: rgba(0, 122, 204, 0.08);
+            transform: translateY(-1px);
+        }
+
+        [data-theme="light"] .toolbar .btn:hover {
+            background-color: rgba(0, 120, 212, 0.08);
+        }
+
+        .toolbar .btn.primary {
+            background-color: var(--accent-color);
+            border-color: var(--accent-color);
+            color: #ffffff;
+        }
+
+        .toolbar .btn.primary:hover {
+            background-color: var(--accent-hover);
+            border-color: var(--accent-hover);
+            color: #ffffff;
+        }
+
+        .toolbar .btn.danger {
+            background-color: var(--error-color);
+            border-color: var(--error-color);
+            color: #ffffff;
+        }
+
+        .toolbar .btn.danger:hover {
+            background-color: #d13438;
+            border-color: #d13438;
+            color: #ffffff;
+        }
+
+        .toolbar .btn-icon {
+            width: 28px;
+            min-width: 28px;
+            padding: 3px;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .editor-container {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+        }
+
+        textarea.raw-input {
+            width: 100%;
+            height: 100%;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            border: none;
+            padding: 10px;
+            font-family: var(--mono-font);
+            font-size: 13px;
+            resize: none;
+            outline: none;
+        }
+
+        .viewer-container {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: var(--bg-color);
+            position: absolute;
+            top: 0;
+            left: 0;
+            display: none;
+        }
+
+        .viewer-container.active {
+            display: block;
+        }
+
+        .CodeMirror {
+            height: 100% !important;
+            font-family: var(--mono-font) !important;
+            font-size: 13px;
+            background-color: var(--bg-color) !important;
+            color: var(--text-primary) !important;
+        }
+
+        .CodeMirror-gutters {
+            background-color: var(--panel-bg) !important;
+            border-right: 1px solid var(--border-color) !important;
+        }
+
+        .CodeMirror-linenumber {
+            color: var(--text-secondary) !important;
+        }
+
+        .cm-highlight-line-preview {
+            background-color: rgba(0, 122, 204, 0.16) !important;
+        }
+
+        .cm-highlight-line-locked {
+            background-color: rgba(255, 204, 0, 0.2) !important;
+            animation: highlightPulse 0.55s ease;
+        }
+
+        [data-theme="light"] .cm-highlight-line-preview {
+            background-color: rgba(0, 120, 212, 0.12) !important;
+        }
+
+        [data-theme="light"] .cm-highlight-line-locked {
+            background-color: rgba(255, 196, 0, 0.25) !important;
+        }
+
+        @keyframes highlightPulse {
+            0% {
+                box-shadow: inset 0 0 0 999px rgba(255, 204, 0, 0.32);
+            }
+
+            100% {
+                box-shadow: inset 0 0 0 999px rgba(255, 204, 0, 0.2);
+            }
+        }
+
+        .debug-section {
+            padding: 15px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .input-group {
+            margin-bottom: 15px;
+        }
+
+        .input-group:last-child {
+            margin-bottom: 0;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 12px;
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+
+        .input-wrapper {
+            display: flex;
+            gap: 8px;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            background-color: var(--input-bg);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 6px 10px;
+            font-family: var(--mono-font);
+            font-size: 13px;
+            outline: none;
+        }
+
+        input[type="text"]:focus {
+            border-color: var(--accent-color);
+        }
+
+        .error-msg {
+            color: var(--error-color);
+            font-size: 12px;
+            margin-top: 5px;
+            min-height: 16px;
+        }
+
+        .results-container {
+            flex: 1;
+            min-height: 0;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            padding: 0;
+        }
+
+        .result-header {
+            flex-shrink: 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 12px 15px 10px;
+            font-size: 12px;
+            color: var(--text-secondary);
+            background-color: var(--bg-color);
+            border-bottom: 1px solid var(--border-color);
+            z-index: 20;
+        }
+
+        .result-header-meta {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .result-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .result-position {
+            min-width: 52px;
+            text-align: center;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .result-nav {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .nav-btn {
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            background-color: transparent;
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: transform 0.18s ease, border-color 0.18s ease, background-color 0.18s ease;
+        }
+
+        .nav-btn:hover:not(:disabled) {
+            border-color: var(--accent-color);
+            background-color: rgba(0, 122, 204, 0.12);
+            transform: translateY(-1px);
+        }
+
+        .nav-btn:disabled {
+            opacity: 0.35;
+            cursor: not-allowed;
+        }
+
+        .result-hint {
+            flex-shrink: 0;
+            font-size: 11px;
+            color: var(--text-secondary);
+            padding: 8px 15px 10px;
+            background-color: var(--bg-color);
+        }
+
+        #result-list {
+            flex: 1;
+            min-height: 0;
+            overflow-y: auto;
+            padding: 0 10px 10px;
+            scroll-behavior: smooth;
+        }
+
+        .hit-count {
+            color: var(--success-color);
+            font-weight: 700;
+        }
+
+        .result-item {
+            background-color: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            margin-bottom: 10px;
+            padding: 12px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: border-color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;
+            will-change: transform;
+        }
+
+        .result-item:hover {
+            border-color: var(--accent-color);
+            transform: translateY(-1px);
+            box-shadow: var(--elevated-shadow);
+        }
+
+        .result-item.current {
+            border-color: rgba(0, 122, 204, 0.4);
+        }
+
+        .result-item.preview {
+            border-color: var(--accent-color);
+            background-color: rgba(0, 122, 204, 0.08);
+        }
+
+        .result-item.active {
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 1px rgba(0, 122, 204, 0.35), var(--elevated-shadow);
+        }
+
+        [data-theme="light"] .result-item.preview {
+            background-color: rgba(0, 120, 212, 0.08);
+        }
+
+        .item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+
+        .item-tag {
+            font-family: var(--mono-font);
+            color: #569cd6;
+            font-size: 12px;
+            word-break: break-all;
+        }
+
+        .item-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            justify-content: flex-end;
+        }
+
+        .item-action-btn {
+            border: 1px solid var(--border-color);
+            background-color: transparent;
+            color: var(--text-secondary);
+            border-radius: 999px;
+            padding: 4px 10px;
+            font-size: 11px;
+            cursor: pointer;
+            transition: border-color 0.18s ease, color 0.18s ease, background-color 0.18s ease, transform 0.18s ease;
+        }
+
+        .item-action-btn:hover {
+            border-color: var(--accent-color);
+            color: var(--text-primary);
+            background-color: rgba(0, 122, 204, 0.08);
+            transform: translateY(-1px);
+        }
+
+        .item-breadcrumb {
+            font-size: 11px;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            line-height: 1.45;
+            word-break: break-word;
+        }
+
+        .item-text {
+            color: var(--text-primary);
+            margin-bottom: 8px;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .item-attrs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 8px;
+        }
+
+        .attr-badge {
+            background-color: var(--panel-strong);
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 11px;
+            font-family: var(--mono-font);
+            color: #9cdcfe;
+        }
+
+        .attr-value {
+            color: #ce9178;
+        }
+
+        .toggle-code-btn {
+            font-size: 11px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            text-decoration: underline;
+            display: inline-block;
+        }
+
+        .item-code {
+            background-color: #1e1e1e;
+            padding: 0 8px;
+            border-radius: 6px;
+            font-family: var(--mono-font);
+            font-size: 11px;
+            color: #6a9955;
+            white-space: pre-wrap;
+            word-break: break-word;
+            max-height: 0;
+            opacity: 0;
+            overflow: hidden;
+            margin-top: 0;
+            transition: max-height 0.22s ease, opacity 0.18s ease, padding 0.18s ease, margin-top 0.18s ease;
+        }
+
+        .item-code.visible {
+            max-height: 170px;
+            opacity: 1;
+            padding: 8px;
+            margin-top: 8px;
+            overflow-y: auto;
+        }
+
+        [data-theme="light"] .item-code {
+            background-color: #f6f6f6;
+        }
+
+
+        .item-playwright {
+            margin-top: 10px;
+            margin-bottom: 8px;
+            padding: 10px;
+            background-color: var(--panel-strong);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+        }
+
+        .item-playwright-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .item-playwright-title {
+            font-size: 11px;
+            color: var(--text-secondary);
+            font-weight: 700;
+        }
+
+        .item-playwright-actions {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+            gap: 6px;
+        }
+
+        .item-playwright-code {
+            font-family: var(--mono-font);
+            font-size: 11px;
+            line-height: 1.5;
+            color: var(--success-color);
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+
+        .preview-container {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #ffffff;
+            position: absolute;
+            top: 0;
+            left: 0;
+            display: none;
+            flex-direction: column;
+        }
+
+        .preview-container.active {
+            display: flex;
+        }
+
+        .preview-toolbar {
+            min-height: 34px;
+            padding: 8px 12px;
+            background-color: var(--panel-bg);
+            color: var(--text-secondary);
+            border-bottom: 1px solid var(--border-color);
+            font-size: 12px;
+            line-height: 1.4;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .preview-frame {
+            flex: 1;
+            width: 100%;
+            border: none;
+            background-color: #ffffff;
+        }
+
+        .empty-state {
+            text-align: center;
+            color: var(--text-secondary);
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal.active {
+            display: flex;
+            animation: modalFade 0.18s ease;
+        }
+
+        @keyframes modalFade {
+            from {
+                opacity: 0;
+                transform: scale(0.985);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .modal-content {
+            width: 90%;
+            height: 90%;
+            background-color: var(--bg-color);
+            border: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .modal-header {
+            padding: 10px;
+            background-color: var(--panel-bg);
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .modal-body {
+            flex: 1;
+            overflow: auto;
+            padding: 20px;
+        }
+
+        .toast {
+            position: fixed;
+            right: 18px;
+            bottom: 18px;
+            z-index: 1200;
+            background-color: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 10px 12px;
+            border-radius: 8px;
+            box-shadow: var(--elevated-shadow);
+            opacity: 0;
+            transform: translateY(8px);
+            pointer-events: none;
+            transition: opacity 0.18s ease, transform 0.18s ease;
+        }
+
+        .toast.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        @media (max-width: 768px) {
+            body {
+                overflow: auto;
+            }
+
+            main {
+                flex-direction: column;
+                overflow-y: auto;
+            }
+
+            .panel-left,
+            .panel-right {
+                width: 100%;
+                min-width: auto;
+                height: 50vh;
+            }
+
+            .panel-left {
+                border-bottom: 1px solid var(--border-color);
+            }
+
+            .resizer {
+                display: none;
+            }
+
+            .result-header,
+            .item-header {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .result-actions,
+            .item-actions {
+                justify-content: flex-start;
+            }
+        }
+    </style>
+</head>
+<body>
+<header>
+    <div class="logo">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="16 18 22 12 16 6"></polyline>
+            <polyline points="8 6 2 12 8 18"></polyline>
+        </svg>
+        <span>LocatorLab</span>
+    </div>
+    <div class="header-actions">
+        <select id="lang-select" class="header-select" onchange="changeLang(this.value)">
+            <option value="en">English</option>
+            <option value="zh">&#20013;&#25991;</option>
+        </select>
+        <button id="theme-btn" class="header-btn" onclick="toggleTheme()">&#127769;</button>
+        <span class="version">version 1.5.9 · © 2026 WenYang</span>
+    </div>
+</header>
+
+<main id="main-container">
+    <div class="panel panel-left" id="panel-left">
+        <div class="toolbar">
+            <button class="btn primary" id="btn-format" onclick="toggleMode()">Format HTML</button>
+            <button class="btn" id="btn-preview" onclick="togglePreviewMode()">Visual Pick</button>
+            <button class="btn" id="btn-clear" onclick="clearAll()">Clear</button>
+            <div style="flex:1;"></div>
+            <button class="btn primary" id="btn-upload" onclick="document.getElementById('file-upload').click()">Upload HTML</button>
+            <input type="file" id="file-upload" accept=".html,.htm,.txt" onchange="handleFileUpload(this)">
+            <button class="btn btn-icon" id="btn-fullscreen" onclick="toggleFullScreen()" title="Maximize View">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"></path>
+                </svg>
+            </button>
+        </div>
+
+        <div class="editor-container">
+            <textarea id="raw-input" class="raw-input" placeholder="Paste your HTML source code here..."></textarea>
+            <div id="viewer-container" class="viewer-container">
+                <textarea id="cm-target"></textarea>
+            </div>
+            <div id="preview-container" class="preview-container">
+                <div class="preview-toolbar">
+                    <span id="preview-hint">Click any element in the preview to generate selector.</span>
+                </div>
+                <iframe id="preview-frame" class="preview-frame" sandbox="allow-same-origin"></iframe>
+            </div>
+        </div>
+    </div>
+
+    <div class="resizer" id="drag-handle"></div>
+
+    <div class="panel panel-right">
+        <div class="debug-section">
+            <div class="input-group">
+                <label for="css-input">CSS Selector</label>
+                <div class="input-wrapper">
+                    <input type="text" id="css-input" placeholder="e.g. .container > div.item">
+                </div>
+                <div id="css-error" class="error-msg"></div>
+            </div>
+
+            <div class="input-group">
+                <label for="xpath-input">XPath</label>
+                <div class="input-wrapper">
+                    <input type="text" id="xpath-input" placeholder="e.g. //div[@class='item']">
+                </div>
+                <div id="xpath-error" class="error-msg"></div>
+            </div>
+        </div>
+
+        <div class="results-container">
+            <div class="result-header">
+                <div class="result-header-meta">
+                    <span id="results-title">Results</span>
+                    <span id="result-stats">Hits: <span class="hit-count">0</span></span>
+                </div>
+                <div class="result-actions">
+                    <span id="result-position" class="result-position">0 / 0</span>
+                    <div class="result-nav">
+                        <button class="nav-btn" id="btn-result-prev" title="Previous result" aria-label="Previous result">&#8593;</button>
+                        <button class="nav-btn" id="btn-result-next" title="Next result" aria-label="Next result">&#8595;</button>
+                    </div>
+                </div>
+            </div>
+            <div id="result-hint" class="result-hint">Hover to preview, click to lock, use arrows to jump.</div>
+            <div id="result-list">
+                <div class="empty-state">Input HTML and a selector to see results.</div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<div id="fs-modal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <button class="btn" id="btn-close-modal" onclick="toggleFullScreen()">Close</button>
+        </div>
+        <div class="modal-body">
+            <textarea id="modal-cm-target"></textarea>
+        </div>
+    </div>
+</div>
+
+<div id="toast" class="toast" aria-live="polite"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/xml/xml.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/css/css.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/htmlmixed/htmlmixed.min.js"></script>
+
+<script>
+    const TOOL_META = Object.freeze({
+        name: 'LocatorLab',
+        author: 'WenYang',
+        version: '1.5.9',
+        copyright: 'Copyright © 2026 WenYang. All rights reserved.',
+        notice: 'Unauthorized copying, redistribution, or commercial use is prohibited.'
+    });
+
+    let currentDoc = null;
+    let rawHtml = '';
+    let currentLang = 'en';
+    let currentTheme = 'dark';
+    let isViewMode = false;
+    let isPreviewMode = false;
+    let previewHoverElement = null;
+    let previewSelectedElement = null;
+    let isResizing = false;
+    let currentResults = [];
+    let nodeLineMap = new Map();
+    let cmEditor = null;
+    let modalEditor = null;
+    let currentResultIndex = -1;
+    let lockedResultIndex = -1;
+    let previewResultIndex = -1;
+    let toastTimer = null;
+    let resultCards = [];
+    const previewHandlerDocs = new WeakSet();
+
+    const i18n = {
+        en: {
+            appTitle: 'LocatorLab — CSS, XPath & Playwright Selector Debugger',
+            title: 'LocatorLab',
+            format: 'Format HTML',
+            edit: 'Edit HTML',
+            upload: 'Upload HTML',
+            clear: 'Clear',
+            visualPick: 'Visual Pick',
+            visualPickActive: 'Edit HTML',
+            previewHint: 'Click any element in the preview to generate CSS, XPath and Playwright snippets.',
+            previewSelected: 'Selector generated from preview.',
+            previewLoadFailed: 'Preview failed to load.',
+            previewMatched: 'Preview highlighted {count} matched element(s).',
+            cssLabel: 'CSS Selector',
+            xpathLabel: 'XPath',
+            cssPlaceholder: 'e.g. .container > div.item',
+            xpathPlaceholder: "e.g. //div[@class='item']",
+            results: 'Results',
+            hits: 'Hits:',
+            inputPrompt: 'Input HTML and a selector to see results.',
+            noMatches: 'No matches found.',
+            inputPlaceholder: 'Paste your HTML source code here...',
+            showHide: 'Show/Hide HTML',
+            close: 'Close',
+            invalidCss: 'Invalid CSS selector.',
+            invalidXpath: 'Invalid XPath expression.',
+            xpathValueLabel: 'XPath Value',
+            resultHint: 'Hover to preview, click to lock, use arrows to jump.',
+            prevResult: 'Previous result',
+            nextResult: 'Next result',
+            copyCss: 'Copy CSS',
+            copyXpath: 'Copy XPath',
+            copyValue: 'Copy Value',
+            copiedCss: 'CSS selector copied.',
+            copiedXpath: 'XPath copied.',
+            copiedValue: 'Value copied.',
+            playwrightTitle: 'Playwright',
+            copyPlaywright: 'Copy Locator',
+            copyPlaywrightWait: 'Copy Wait',
+            copyPlaywrightClick: 'Copy Click',
+            copyPlaywrightRole: 'Copy Role',
+            copiedPlaywright: 'Playwright snippet copied.',
+            copyFailed: 'Copy failed.'
+        },
+        zh: {
+            appTitle: 'LocatorLab — CSS、XPath \u4e0e Playwright \u9009\u62e9\u5668\u8c03\u8bd5\u5668',
+            title: 'LocatorLab',
+            format: '\u683c\u5f0f\u5316 HTML',
+            edit: '\u7f16\u8f91 HTML',
+            upload: '\u4e0a\u4f20 HTML',
+            clear: '\u6e05\u7a7a',
+            visualPick: '\u9884\u89c8\u70b9\u9009',
+            visualPickActive: '\u7f16\u8f91 HTML',
+            previewHint: '\u70b9\u51fb\u9884\u89c8\u9875\u9762\u4e2d\u7684\u5143\u7d20\uff0c\u81ea\u52a8\u751f\u6210 CSS\u3001XPath \u548c Playwright \u5199\u6cd5\u3002',
+            previewSelected: '\u5df2\u6839\u636e\u9884\u89c8\u70b9\u9009\u751f\u6210\u9009\u62e9\u5668\u3002',
+            previewLoadFailed: '\u9884\u89c8\u52a0\u8f7d\u5931\u8d25\u3002',
+            previewMatched: '\u9884\u89c8\u533a\u5df2\u6846\u51fa {count} \u4e2a\u547d\u4e2d\u5143\u7d20\u3002',
+            cssLabel: 'CSS \u9009\u62e9\u5668',
+            xpathLabel: 'XPath',
+            cssPlaceholder: '\u4f8b\u5982\uff1a.container > div.item',
+            xpathPlaceholder: '\u4f8b\u5982\uff1a//div[@class=\'item\']',
+            results: '\u7ed3\u679c',
+            hits: '\u547d\u4e2d:',
+            inputPrompt: '\u8f93\u5165 HTML \u548c\u9009\u62e9\u5668\u540e\u5373\u53ef\u67e5\u770b\u7ed3\u679c\u3002',
+            noMatches: '\u672a\u627e\u5230\u5339\u914d\u9879\u3002',
+            inputPlaceholder: '\u5728\u6b64\u7c98\u8d34\u4f60\u7684 HTML \u6e90\u7801...',
+            showHide: '\u5c55\u5f00/\u6536\u8d77 HTML',
+            close: '\u5173\u95ed',
+            invalidCss: '\u65e0\u6548\u7684 CSS \u9009\u62e9\u5668\u3002',
+            invalidXpath: '\u65e0\u6548\u7684 XPath \u8868\u8fbe\u5f0f\u3002',
+            xpathValueLabel: 'XPath \u8fd4\u56de\u503c',
+            resultHint: '\u60ac\u505c\u9884\u89c8\uff0c\u70b9\u51fb\u9501\u5b9a\uff0c\u4f7f\u7528\u4e0a\u4e0b\u65b9\u5411\u952e\u8df3\u8f6c\u3002',
+            prevResult: '\u4e0a\u4e00\u4e2a\u7ed3\u679c',
+            nextResult: '\u4e0b\u4e00\u4e2a\u7ed3\u679c',
+            copyCss: '\u590d\u5236 CSS',
+            copyXpath: '\u590d\u5236 XPath',
+            copyValue: '\u590d\u5236\u503c',
+            copiedCss: 'CSS \u9009\u62e9\u5668\u5df2\u590d\u5236\u3002',
+            copiedXpath: 'XPath \u5df2\u590d\u5236\u3002',
+            copiedValue: '\u503c\u5df2\u590d\u5236\u3002',
+            playwrightTitle: 'Playwright \u5199\u6cd5',
+            copyPlaywright: '\u590d\u5236\u5b9a\u4f4d',
+            copyPlaywrightWait: '\u590d\u5236\u7b49\u5f85',
+            copyPlaywrightClick: '\u590d\u5236\u70b9\u51fb',
+            copyPlaywrightRole: '\u590d\u5236 Role',
+            copiedPlaywright: 'Playwright \u5199\u6cd5\u5df2\u590d\u5236\u3002',
+            copyFailed: '\u590d\u5236\u5931\u8d25\u3002'
+        }
+    };
+
+    const rawInput = document.getElementById('raw-input');
+    const viewerContainer = document.getElementById('viewer-container');
+    const previewContainer = document.getElementById('preview-container');
+    const previewFrame = document.getElementById('preview-frame');
+    const previewHint = document.getElementById('preview-hint');
+    const resultList = document.getElementById('result-list');
+    const resultStats = document.getElementById('result-stats');
+    const cssInput = document.getElementById('css-input');
+    const xpathInput = document.getElementById('xpath-input');
+    const cssError = document.getElementById('css-error');
+    const xpathError = document.getElementById('xpath-error');
+    const resizer = document.getElementById('drag-handle');
+    const leftPanel = document.getElementById('panel-left');
+    const mainContainer = document.getElementById('main-container');
+    const modal = document.getElementById('fs-modal');
+    const resultPosition = document.getElementById('result-position');
+    const resultPrevBtn = document.getElementById('btn-result-prev');
+    const resultNextBtn = document.getElementById('btn-result-next');
+    const resultHint = document.getElementById('result-hint');
+    const toast = document.getElementById('toast');
+
+    function debounce(func, wait) {
+        let timeoutId;
+        return (...args) => {
+            clearTimeout(timeoutId);
+            timeoutId = setTimeout(() => func(...args), wait);
+        };
+    }
+
+    function escapeHtml(value) {
+        return String(value ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    function truncateText(value, maxLength) {
+        const text = String(value ?? '').trim();
+        return text.length > maxLength ? `${text.slice(0, maxLength)}...` : text;
+    }
+
+    function truncateCode(value, maxLength) {
+        const text = String(value ?? '');
+        return text.length > maxLength ? `${text.slice(0, maxLength)}...` : text;
+    }
+
+    function showToast(message) {
+        toast.textContent = message;
+        toast.classList.add('visible');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => toast.classList.remove('visible'), 1600);
+    }
+
+    function updateHitCountText(count = 0) {
+        resultStats.innerHTML = `${i18n[currentLang].hits} <span class="hit-count">${count}</span>`;
+    }
+
+    function resetResultState() {
+        currentResultIndex = -1;
+        lockedResultIndex = -1;
+        previewResultIndex = -1;
+        resultCards = [];
+        updateResultControls();
+    }
+
+    function getDisplayResultIndex() {
+        if (previewResultIndex !== -1) return previewResultIndex;
+        if (lockedResultIndex !== -1) return lockedResultIndex;
+        return currentResultIndex;
+    }
+
+    function updateResultControls() {
+        const total = currentResults.length;
+        const displayIndex = getDisplayResultIndex();
+        const positionText = total > 0 && displayIndex !== -1 ? `${displayIndex + 1} / ${total}` : `0 / ${total}`;
+        resultPosition.textContent = positionText;
+        const disabled = total < 2;
+        resultPrevBtn.disabled = disabled;
+        resultNextBtn.disabled = disabled;
+    }
+
+    function syncResultCardState() {
+        resultCards.forEach((card, index) => {
+            card.classList.toggle('current', index === currentResultIndex);
+            card.classList.toggle('preview', index === previewResultIndex);
+            card.classList.toggle('active', index === lockedResultIndex);
+        });
+        updateResultControls();
+    }
+
+    function renderEmptyState(message) {
+        resultList.innerHTML = '';
+        const empty = document.createElement('div');
+        empty.className = 'empty-state';
+        empty.textContent = message;
+        resultList.appendChild(empty);
+        currentResults = [];
+        updateHitCountText(0);
+        resetResultState();
+        clearEditorHighlights();
+        syncPreviewMatchesFromInputs();
+    }
+
+    function getNodeLabel(node) {
+        if (!node) return 'unknown';
+
+        switch (node.nodeType) {
+            case Node.ELEMENT_NODE:
+                return `<${node.tagName.toLowerCase()}>`;
+            case Node.ATTRIBUTE_NODE:
+                return `@${node.name}`;
+            case Node.TEXT_NODE:
+                return '#text';
+            case Node.COMMENT_NODE:
+                return '#comment';
+            case Node.DOCUMENT_NODE:
+                return '#document';
+            case Node.DOCUMENT_TYPE_NODE:
+                return `<!DOCTYPE ${node.name}>`;
+            default:
+                return node.nodeName || 'unknown';
+        }
+    }
+
+    function getNodePreviewText(node) {
+        if (!node) return '';
+
+        switch (node.nodeType) {
+            case Node.ATTRIBUTE_NODE:
+                return node.value;
+            case Node.TEXT_NODE:
+            case Node.COMMENT_NODE:
+                return node.nodeValue || '';
+            case Node.DOCUMENT_NODE:
+                return node.documentElement ? node.documentElement.textContent || '' : '';
+            default:
+                return node.textContent || '';
+        }
+    }
+
+    function getNodeMarkup(node) {
+        if (!node) return '';
+
+        switch (node.nodeType) {
+            case Node.ELEMENT_NODE:
+                return node.outerHTML || '';
+            case Node.ATTRIBUTE_NODE:
+                return `${node.name}="${node.value}"`;
+            case Node.TEXT_NODE:
+                return node.nodeValue || '';
+            case Node.COMMENT_NODE:
+                return `<!--${node.nodeValue || ''}-->`;
+            case Node.DOCUMENT_NODE:
+                return node.documentElement ? node.documentElement.outerHTML || '' : '';
+            case Node.DOCUMENT_TYPE_NODE:
+                return `<!DOCTYPE ${node.name}>`;
+            default:
+                return node.nodeValue || '';
+        }
+    }
+
+    function getSelectorAnchor(node) {
+        if (!node) return null;
+        if (node.nodeType === Node.ELEMENT_NODE) return node;
+        if (node.nodeType === Node.ATTRIBUTE_NODE) return node.ownerElement;
+        if (node.nodeType === Node.TEXT_NODE || node.nodeType === Node.COMMENT_NODE) {
+            return node.parentElement || node.parentNode;
+        }
+        if (node.nodeType === Node.DOCUMENT_NODE) return node.documentElement;
+        return node.parentElement || node.parentNode || null;
+    }
+
+    function resolveHighlightTarget(node) {
+        return getSelectorAnchor(node);
+    }
+
+    function clearEditorHighlights() {
+        if (!cmEditor) return;
+
+        const doc = cmEditor.getDoc();
+        for (let i = 0; i < doc.lineCount(); i++) {
+            cmEditor.removeLineClass(i, 'background', 'cm-highlight-line-preview');
+            cmEditor.removeLineClass(i, 'background', 'cm-highlight-line-locked');
+        }
+    }
+
+    function ensureCurrentDocument() {
+        const latestHtml = rawInput.value;
+
+        if (latestHtml === rawHtml && currentDoc) {
+            return true;
+        }
+
+        rawHtml = latestHtml;
+
+        if (!rawHtml.trim()) {
+            currentDoc = null;
+            nodeLineMap.clear();
+            return false;
+        }
+
+        const parser = new DOMParser();
+        currentDoc = parser.parseFromString(rawHtml, 'text/html');
+        return true;
+    }
+
+    function escapeCssIdentifier(value) {
+        if (window.CSS && typeof window.CSS.escape === 'function') {
+            return window.CSS.escape(String(value));
+        }
+
+        return String(value).replace(/[^a-zA-Z0-9_-]/g, match => `\\${match}`);
+    }
+
+    function getNthOfTypeIndex(element) {
+        if (!element || !element.parentElement) return 1;
+        const siblings = Array.from(element.parentElement.children).filter(sibling => sibling.tagName === element.tagName);
+        return siblings.indexOf(element) + 1;
+    }
+
+    function getSameTypeNodeIndex(node) {
+        if (!node || !node.parentNode) return 1;
+        const siblings = Array.from(node.parentNode.childNodes).filter(candidate => {
+            if (candidate.nodeType !== node.nodeType) return false;
+            return candidate.nodeType !== Node.ELEMENT_NODE || candidate.tagName === node.tagName;
+        });
+        return siblings.indexOf(node) + 1;
+    }
+
+    function getSelectorClassNames(element) {
+        if (!element || !element.classList) return [];
+        return Array.from(element.classList).filter(name => name && !name.startsWith('__selector_tool_'));
+    }
+
+    function isUniqueCssSelector(selector, element, doc = currentDoc) {
+        if (!selector || !element || !doc) return false;
+        try {
+            const matches = doc.querySelectorAll(selector);
+            return matches.length === 1 && matches[0] === element;
+        } catch (error) {
+            return false;
+        }
+    }
+
+    function buildElementCssSelector(element, doc = currentDoc) {
+        if (!element || element.nodeType !== Node.ELEMENT_NODE || !doc) return '';
+
+        if (element.id) {
+            const idSelector = `#${escapeCssIdentifier(element.id)}`;
+            if (isUniqueCssSelector(idSelector, element, doc)) return idSelector;
+        }
+
+        const segments = [];
+        let current = element;
+
+        while (current && current.nodeType === Node.ELEMENT_NODE) {
+            let segment = current.tagName.toLowerCase();
+
+            if (current.id) {
+                const idSelector = `#${escapeCssIdentifier(current.id)}`;
+                if (isUniqueCssSelector(idSelector, current, doc)) {
+                    segments.unshift(idSelector);
+                    return segments.join(' > ');
+                }
+                segment += `#${escapeCssIdentifier(current.id)}`;
+            } else {
+                const classNames = getSelectorClassNames(current).slice(0, 2).map(escapeCssIdentifier);
+                if (classNames.length) {
+                    const classSelector = `${segment}.${classNames.join('.')}`;
+                    const siblings = current.parentElement
+                        ? Array.from(current.parentElement.children).filter(sibling => {
+                            try { return sibling.matches(classSelector); } catch (error) { return false; }
+                        })
+                        : [];
+                    segment = siblings.length <= 1 ? classSelector : `${classSelector}:nth-of-type(${getNthOfTypeIndex(current)})`;
+                } else if (current.parentElement) {
+                    const siblings = Array.from(current.parentElement.children).filter(sibling => sibling.tagName === current.tagName);
+                    if (siblings.length > 1) segment += `:nth-of-type(${getNthOfTypeIndex(current)})`;
+                }
+            }
+
+            segments.unshift(segment);
+            const candidate = segments.join(' > ');
+            if (isUniqueCssSelector(candidate, element, doc)) return candidate;
+            current = current.parentElement;
+        }
+
+        return segments.join(' > ') || 'html';
+    }
+
+    function buildNodeCssSelector(node) {
+        const anchor = getSelectorAnchor(node);
+        return anchor ? buildElementCssSelector(anchor) : '';
+    }
+
+    function escapeXPathLiteral(value) {
+        const text = String(value);
+        if (!text.includes("'")) return `'${text}'`;
+        if (!text.includes('"')) return `"${text}"`;
+        return `concat(${text.split("'").map(part => `'${part}'`).join(', "\'", ')})`;
+    }
+
+    function buildElementXPath(element, doc = currentDoc) {
+        if (!element || element.nodeType !== Node.ELEMENT_NODE || !doc) return '';
+
+        if (element.id) {
+            const idPath = `//*[@id=${escapeXPathLiteral(element.id)}]`;
+            try {
+                const match = doc.evaluate(idPath, doc, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
+                if (match === element) return idPath;
+            } catch (error) {
+                // Fall back to an absolute path.
+            }
+        }
+
+        const segments = [];
+        let current = element;
+        while (current && current.nodeType === Node.ELEMENT_NODE) {
+            let segment = current.tagName.toLowerCase();
+            if (current.parentElement) {
+                const siblings = Array.from(current.parentElement.children).filter(sibling => sibling.tagName === current.tagName);
+                if (siblings.length > 1) segment += `[${siblings.indexOf(current) + 1}]`;
+            }
+            segments.unshift(segment);
+            current = current.parentElement;
+        }
+        return `/${segments.join('/')}`;
+    }
+
+    function buildNodeXPath(node) {
+        if (!node) return '';
+        switch (node.nodeType) {
+            case Node.ELEMENT_NODE:
+                return buildElementXPath(node);
+            case Node.ATTRIBUTE_NODE:
+                return `${buildElementXPath(node.ownerElement)}/@${node.name}`;
+            case Node.TEXT_NODE:
+                return `${buildElementXPath(node.parentElement || node.parentNode)}/text()[${getSameTypeNodeIndex(node)}]`;
+            case Node.COMMENT_NODE:
+                return `${buildElementXPath(node.parentElement || node.parentNode)}/comment()[${getSameTypeNodeIndex(node)}]`;
+            case Node.DOCUMENT_NODE:
+                return '/';
+            default:
+                return buildElementXPath(getSelectorAnchor(node));
+        }
+    }
+
+    function describeElementForBreadcrumb(element) {
+        if (!element || element.nodeType !== Node.ELEMENT_NODE) return '';
+
+        let segment = element.tagName.toLowerCase();
+        if (element.id) return `${segment}#${element.id}`;
+
+        const classNames = Array.from(element.classList).filter(Boolean).slice(0, 2);
+        if (classNames.length > 0) {
+            segment += `.${classNames.join('.')}`;
+        }
+
+        if (element.parentElement) {
+            const sameTagSiblings = Array.from(element.parentElement.children).filter(sibling => sibling.tagName === element.tagName);
+            if (sameTagSiblings.length > 1) {
+                segment += `:nth-of-type(${sameTagSiblings.indexOf(element) + 1})`;
+            }
+        }
+
+        return segment;
+    }
+
+    function getNodeBreadcrumb(node) {
+        const anchor = getSelectorAnchor(node);
+        if (!anchor || anchor.nodeType !== Node.ELEMENT_NODE) return getNodeLabel(node);
+
+        const segments = [];
+        let current = anchor;
+        while (current && current.nodeType === Node.ELEMENT_NODE) {
+            segments.unshift(describeElementForBreadcrumb(current));
+            current = current.parentElement;
+        }
+
+        let breadcrumb = segments.join(' > ');
+
+        if (node.nodeType === Node.ATTRIBUTE_NODE) {
+            breadcrumb += ` > @${node.name}`;
+        } else if (node.nodeType === Node.TEXT_NODE) {
+            breadcrumb += ` > text()[${getSameTypeNodeIndex(node)}]`;
+        } else if (node.nodeType === Node.COMMENT_NODE) {
+            breadcrumb += ` > comment()[${getSameTypeNodeIndex(node)}]`;
+        }
+
+        return breadcrumb;
+    }
+
+    function formatDom(node) {
+        nodeLineMap.clear();
+        const lines = [];
+        let lineIndex = 0;
+        const voidElements = new Set(['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'param', 'source', 'track', 'wbr']);
+
+        function addLine(text, mapNode = null) {
+            if (mapNode) nodeLineMap.set(mapNode, lineIndex);
+            lines.push(text);
+            lineIndex += 1;
+        }
+
+        function processNode(currentNode, level) {
+            const indent = '  '.repeat(level);
+
+            if (currentNode.nodeType === Node.DOCUMENT_NODE) {
+                Array.from(currentNode.childNodes).forEach(child => processNode(child, level));
+                return;
+            }
+
+            if (currentNode.nodeType === Node.DOCUMENT_TYPE_NODE) {
+                addLine(`<!DOCTYPE ${currentNode.name}>`, currentNode);
+                return;
+            }
+
+            if (currentNode.nodeType === Node.COMMENT_NODE) {
+                addLine(`${indent}<!--${currentNode.nodeValue || ''}-->`, currentNode);
+                return;
+            }
+
+            if (currentNode.nodeType === Node.TEXT_NODE) {
+                const text = currentNode.nodeValue ? currentNode.nodeValue.replace(/\s+/g, ' ').trim() : '';
+                if (text) addLine(`${indent}${escapeHtml(text)}`, currentNode);
+                return;
+            }
+
+            if (currentNode.nodeType !== Node.ELEMENT_NODE) return;
+
+            const tag = currentNode.tagName.toLowerCase();
+            let openTag = `${indent}<${tag}`;
+
+            Array.from(currentNode.attributes).forEach(attr => {
+                openTag += ` ${attr.name}="${escapeHtml(attr.value)}"`;
+            });
+
+            if (voidElements.has(tag)) {
+                addLine(`${openTag} />`, currentNode);
+                return;
+            }
+
+            const childElements = Array.from(currentNode.childNodes).filter(child => child.nodeType === Node.ELEMENT_NODE);
+            const childText = Array.from(currentNode.childNodes).filter(child => child.nodeType === Node.TEXT_NODE && child.nodeValue && child.nodeValue.trim());
+            const childComments = Array.from(currentNode.childNodes).filter(child => child.nodeType === Node.COMMENT_NODE);
+
+            if (childElements.length === 0 && childComments.length === 0 && childText.length <= 1) {
+                const inlineText = escapeHtml((currentNode.textContent || '').replace(/\s+/g, ' ').trim());
+                addLine(`${openTag}>${inlineText}</${tag}>`, currentNode);
+                return;
+            }
+
+            addLine(`${openTag}>`, currentNode);
+            Array.from(currentNode.childNodes).forEach(child => processNode(child, level + 1));
+            addLine(`${indent}</${tag}>`);
+        }
+
+        processNode(node, 0);
+        return lines.join('\n');
+    }
+
+    function ensureCodeMirror(targetId) {
+        if (targetId === 'cm-target') {
+            if (!cmEditor) {
+                cmEditor = CodeMirror.fromTextArea(document.getElementById(targetId), {
+                    mode: 'htmlmixed',
+                    theme: currentTheme === 'dark' ? 'darcula' : 'neo',
+                    lineNumbers: true,
+                    readOnly: true,
+                    lineWrapping: true
+                });
+            }
+            return cmEditor;
+        }
+
+        if (!modalEditor) {
+            modalEditor = CodeMirror.fromTextArea(document.getElementById(targetId), {
+                mode: 'htmlmixed',
+                theme: currentTheme === 'dark' ? 'darcula' : 'neo',
+                lineNumbers: true,
+                readOnly: true,
+                lineWrapping: true
+            });
+        }
+        return modalEditor;
+    }
+
+    function formatAndShow() {
+        if (!ensureCurrentDocument()) return;
+
+        const editor = ensureCodeMirror('cm-target');
+        editor.setValue(formatDom(currentDoc));
+        setTimeout(() => editor.refresh(), 10);
+    }
+
+    function setViewMode(enabled) {
+        const t = i18n[currentLang];
+        if (enabled && isPreviewMode) {
+            setPreviewMode(false);
+        }
+        isViewMode = enabled;
+
+        if (enabled) {
+            formatAndShow();
+            rawInput.style.display = 'none';
+            previewContainer.classList.remove('active');
+            viewerContainer.classList.add('active');
+            document.getElementById('btn-format').textContent = t.edit;
+            return;
+        }
+
+        viewerContainer.classList.remove('active');
+        if (!isPreviewMode) {
+            rawInput.style.display = 'block';
+        }
+        document.getElementById('btn-format').textContent = t.format;
+        clearEditorHighlights();
+    }
+
+    function toggleMode() {
+        if (isPreviewMode) {
+            setPreviewMode(false);
+            if (rawInput.value.trim()) {
+                setViewMode(true);
+            }
+            return;
+        }
+
+        if (isViewMode) {
+            setViewMode(false);
+            return;
+        }
+
+        if (!rawInput.value.trim()) return;
+        setViewMode(true);
+    }
+
+    function applyEditorHighlight(node, options = {}) {
+        const { forceView = false, scroll = false, variant = 'locked' } = options;
+        if (!node) return;
+
+        if (forceView && !isViewMode) {
+            setViewMode(true);
+        } else if (!isViewMode) {
+            return;
+        }
+
+        const target = resolveHighlightTarget(node);
+        if (!target) return;
+
+        if (!nodeLineMap.has(target)) {
+            formatAndShow();
+        }
+
+        setTimeout(() => {
+            if (!cmEditor) return;
+
+            const actualTarget = resolveHighlightTarget(node);
+            if (!actualTarget || !nodeLineMap.has(actualTarget)) return;
+
+            const lineIndex = nodeLineMap.get(actualTarget);
+            clearEditorHighlights();
+            cmEditor.addLineClass(lineIndex, 'background', variant === 'preview' ? 'cm-highlight-line-preview' : 'cm-highlight-line-locked');
+
+            if (!scroll) return;
+
+            const coords = cmEditor.charCoords({ line: lineIndex, ch: 0 }, 'local');
+            const scrollTop = Math.max(0, coords.top - 80);
+            const scroller = cmEditor.getScrollerElement();
+
+            if (typeof scroller.scrollTo === 'function') {
+                scroller.scrollTo({ top: scrollTop, behavior: 'smooth' });
+            } else {
+                cmEditor.scrollTo(null, scrollTop);
+            }
+        }, forceView ? 60 : 20);
+    }
+
+    function restoreLockedHighlight() {
+        if (lockedResultIndex !== -1 && currentResults[lockedResultIndex]) {
+            applyEditorHighlight(currentResults[lockedResultIndex], { scroll: false, variant: 'locked' });
+        } else {
+            clearEditorHighlights();
+        }
+    }
+
+    function selectResult(index, options = {}) {
+        if (!currentResults.length || index < 0 || index >= currentResults.length) return;
+
+        const { forceView = true, scrollEditor = true, scrollCard = true } = options;
+        currentResultIndex = index;
+        lockedResultIndex = index;
+        previewResultIndex = -1;
+        syncResultCardState();
+        applyEditorHighlight(currentResults[index], { forceView, scroll: scrollEditor, variant: 'locked' });
+
+        if (scrollCard && resultCards[index]) {
+            resultCards[index].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        }
+    }
+
+    function previewResult(index) {
+        if (!currentResults.length || index < 0 || index >= currentResults.length) return;
+
+        previewResultIndex = index;
+        currentResultIndex = index;
+        syncResultCardState();
+        applyEditorHighlight(currentResults[index], { forceView: false, scroll: false, variant: 'preview' });
+    }
+
+    function clearPreviewResult(index) {
+        if (previewResultIndex !== index) return;
+
+        previewResultIndex = -1;
+        syncResultCardState();
+        restoreLockedHighlight();
+        syncPreviewMatchesFromInputs();
+    }
+
+    function moveResult(step) {
+        if (!currentResults.length) return;
+
+        const total = currentResults.length;
+        const baseIndex = lockedResultIndex !== -1 ? lockedResultIndex : (currentResultIndex !== -1 ? currentResultIndex : 0);
+        const nextIndex = (baseIndex + step + total) % total;
+        selectResult(nextIndex, { forceView: true, scrollEditor: true, scrollCard: true });
+    }
+
+    async function copyText(text, successMessage) {
+        if (!text) return;
+        let copied = false;
+
+        try {
+            if (!navigator.clipboard || typeof navigator.clipboard.writeText !== 'function') throw new Error('clipboard-unavailable');
+            await navigator.clipboard.writeText(text);
+            copied = true;
+        } catch (error) {
+            const helper = document.createElement('textarea');
+            helper.value = text;
+            helper.setAttribute('readonly', 'readonly');
+            helper.style.position = 'fixed';
+            helper.style.top = '-9999px';
+            document.body.appendChild(helper);
+            helper.select();
+            try { copied = document.execCommand('copy'); } catch (fallbackError) { copied = false; }
+            helper.remove();
+        }
+
+        showToast(copied ? successMessage : i18n[currentLang].copyFailed);
+    }
+
+    function createActionButton(label, onClick) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'item-action-btn';
+        button.textContent = label;
+        button.addEventListener('click', event => {
+            event.stopPropagation();
+            onClick();
+        });
+        return button;
+    }
+
+    function toPythonString(value) {
+        return JSON.stringify(String(value ?? ''));
+    }
+
+    function getActiveSelectorInfo(cssSelector, xpathSelector) {
+        const typedCss = cssInput.value.trim();
+        const typedXpath = xpathInput.value.trim();
+
+        if (typedCss) return { type: 'css', selector: typedCss };
+        if (typedXpath) return { type: 'xpath', selector: typedXpath };
+        if (cssSelector) return { type: 'css', selector: cssSelector };
+        if (xpathSelector) return { type: 'xpath', selector: xpathSelector };
+        return null;
+    }
+
+    function buildPlaywrightLocator(info, index, total) {
+        if (!info || !info.selector) return '';
+        const selector = info.type === 'xpath' ? `xpath=${info.selector}` : info.selector;
+        let snippet = `page.locator(${toPythonString(selector)})`;
+        if (total > 1) snippet += `.nth(${index})`;
+        return snippet;
+    }
+
+    function getNormalizedElementText(element) {
+        if (!element || element.nodeType !== Node.ELEMENT_NODE) return '';
+        return (element.textContent || '').replace(/\s+/g, ' ').trim();
+    }
+
+    function removeCommonFileSuffix(text) {
+        return String(text || '').replace(/\.(docx?|xlsx?|pptx?|pdf|txt|zip|rar|7z|png|jpe?g|gif|csv)$/i, '');
+    }
+
+    function getFlexibleTextCandidate(text) {
+        let value = removeCommonFileSuffix(String(text || '').replace(/\s+/g, ' ').trim());
+        if (!value) return '';
+
+        const splitBy = ['：', ':', '，', ',', '。', '、', '|', '-', '—', '_'];
+        for (const mark of splitBy) {
+            const part = value.split(mark)[0].trim();
+            if (part.length >= 6) {
+                value = part;
+                break;
+            }
+        }
+
+        if (value.length > 24) {
+            value = value.slice(0, 24);
+        }
+        return value;
+    }
+
+    function getCompactElementText(element) {
+        const text = getNormalizedElementText(element);
+        if (!text || text.length > 40) return '';
+        return text;
+    }
+
+    function inferPlaywrightRole(element) {
+        if (!element || element.nodeType !== Node.ELEMENT_NODE) return '';
+
+        const explicitRole = element.getAttribute('role');
+        if (explicitRole) return explicitRole;
+
+        const tag = element.tagName.toLowerCase();
+        if (tag === 'button') return 'button';
+        if (tag === 'a' && element.getAttribute('href')) return 'link';
+        if (tag === 'input') {
+            const type = (element.getAttribute('type') || 'text').toLowerCase();
+            if (['button', 'submit', 'reset'].includes(type)) return 'button';
+            if (['checkbox', 'radio'].includes(type)) return type;
+            if (['text', 'search', 'email', 'tel', 'url', 'password'].includes(type)) return 'textbox';
+        }
+        if (tag === 'select') return 'combobox';
+        if (tag === 'textarea') return 'textbox';
+        return '';
+    }
+
+    function buildPlaywrightRecommendation(node, index, total, cssSelector, xpathSelector) {
+        const anchor = getSelectorAnchor(node);
+        const active = getActiveSelectorInfo(cssSelector, xpathSelector);
+        const main = active ? buildPlaywrightLocator(active, index, total) : '';
+        const result = {
+            main,
+            wait: main ? `${main}.wait_for()` : '',
+            click: main ? `${main}.click()` : '',
+            role: ''
+        };
+
+        if (!anchor || anchor.nodeType !== Node.ELEMENT_NODE) return result;
+
+        const role = inferPlaywrightRole(anchor);
+        const compactText = getCompactElementText(anchor);
+        const ariaLabel = anchor.getAttribute('aria-label') || '';
+        const valueText = anchor.getAttribute('value') || '';
+        const inputValue = anchor.tagName.toLowerCase() === 'input' ? valueText : '';
+        const nameText = getFlexibleTextCandidate(ariaLabel || inputValue || compactText || valueText);
+
+        if (role && nameText) {
+            result.role = `page.get_by_role(${toPythonString(role)}, name=${toPythonString(nameText)})`;
+        }
+
+
+        return result;
+    }
+
+    function renderPlaywrightBlock(item, node, index, total, cssSelector, xpathSelector) {
+        const snippets = buildPlaywrightRecommendation(node, index, total, cssSelector, xpathSelector);
+        if (!snippets.main) return;
+
+        const wrapper = document.createElement('div');
+        wrapper.className = 'item-playwright';
+
+        const top = document.createElement('div');
+        top.className = 'item-playwright-top';
+
+        const title = document.createElement('div');
+        title.className = 'item-playwright-title';
+        title.textContent = i18n[currentLang].playwrightTitle;
+
+        const actions = document.createElement('div');
+        actions.className = 'item-playwright-actions';
+        actions.appendChild(createActionButton(i18n[currentLang].copyPlaywright, () => copyText(snippets.main, i18n[currentLang].copiedPlaywright)));
+        actions.appendChild(createActionButton(i18n[currentLang].copyPlaywrightWait, () => copyText(snippets.wait, i18n[currentLang].copiedPlaywright)));
+        actions.appendChild(createActionButton(i18n[currentLang].copyPlaywrightClick, () => copyText(snippets.click, i18n[currentLang].copiedPlaywright)));
+
+        if (snippets.role) {
+            actions.appendChild(createActionButton(i18n[currentLang].copyPlaywrightRole, () => copyText(snippets.role, i18n[currentLang].copiedPlaywright)));
+        }
+
+        top.appendChild(title);
+        top.appendChild(actions);
+
+        const code = document.createElement('div');
+        code.className = 'item-playwright-code';
+        code.textContent = snippets.main;
+
+        wrapper.appendChild(top);
+        wrapper.appendChild(code);
+        item.appendChild(wrapper);
+    }
+
+
+    function getPreviewDocument() {
+        try {
+            return previewFrame.contentDocument || (previewFrame.contentWindow && previewFrame.contentWindow.document) || null;
+        } catch (error) {
+            return null;
+        }
+    }
+
+    function sanitizeHtmlForPreview(html) {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+
+        doc.querySelectorAll('script').forEach(script => script.remove());
+        doc.querySelectorAll('*').forEach(element => {
+            Array.from(element.attributes).forEach(attr => {
+                const attrName = attr.name.toLowerCase();
+                const attrValue = String(attr.value || '').trim();
+                if (attrName.startsWith('on')) {
+                    element.removeAttribute(attr.name);
+                }
+                if ((attrName === 'href' || attrName === 'src') && /^javascript:/i.test(attrValue)) {
+                    element.removeAttribute(attr.name);
+                }
+            });
+        });
+
+        const style = doc.createElement('style');
+        style.id = '__selector_tool_preview_style__';
+        style.textContent = `
+            .__selector_tool_match__ {
+                outline: 2px solid #007acc !important;
+                outline-offset: 2px !important;
+                box-shadow: 0 0 0 4px rgba(0, 122, 204, 0.18) !important;
+            }
+            .__selector_tool_hover__ {
+                outline: 2px dashed #007acc !important;
+                outline-offset: 2px !important;
+                cursor: crosshair !important;
+            }
+            .__selector_tool_selected__ {
+                outline: 3px solid #ffcc00 !important;
+                outline-offset: 2px !important;
+                box-shadow: 0 0 0 4px rgba(255, 204, 0, 0.24) !important;
+            }
+        `;
+        (doc.head || doc.documentElement).appendChild(style);
+        return `<!DOCTYPE html>\n${doc.documentElement.outerHTML}`;
+    }
+
+    function withCleanPreviewDom(doc, callback) {
+        const classes = ['__selector_tool_match__', '__selector_tool_hover__', '__selector_tool_selected__'];
+        const states = [];
+        doc.querySelectorAll('[class*="__selector_tool_"], [data-selector-tool-match-index]').forEach(element => {
+            const present = classes.filter(name => element.classList.contains(name));
+            const hadIndex = element.hasAttribute('data-selector-tool-match-index');
+            if (!present.length && !hadIndex) return;
+            states.push({ element, present, hadIndex, index: element.getAttribute('data-selector-tool-match-index') });
+            present.forEach(name => element.classList.remove(name));
+            element.removeAttribute('data-selector-tool-match-index');
+        });
+
+        const style = doc.getElementById('__selector_tool_preview_style__');
+        const parent = style && style.parentNode;
+        const next = style && style.nextSibling;
+        if (style) style.remove();
+
+        try {
+            return callback();
+        } finally {
+            if (style && parent) parent.insertBefore(style, next);
+            states.forEach(({ element, present, hadIndex, index }) => {
+                present.forEach(name => element.classList.add(name));
+                if (hadIndex) element.setAttribute('data-selector-tool-match-index', index ?? '');
+            });
+        }
+    }
+
+    function clearPreviewMatchMarks() {
+        const doc = getPreviewDocument();
+        if (!doc) return;
+        doc.querySelectorAll('.__selector_tool_match__').forEach(element => {
+            element.classList.remove('__selector_tool_match__');
+            element.removeAttribute('data-selector-tool-match-index');
+        });
+    }
+
+    function clearPreviewMarks() {
+        const doc = getPreviewDocument();
+        if (!doc) return;
+        doc.querySelectorAll('.__selector_tool_hover__, .__selector_tool_selected__, .__selector_tool_match__').forEach(element => {
+            element.classList.remove('__selector_tool_hover__', '__selector_tool_selected__', '__selector_tool_match__');
+            element.removeAttribute('data-selector-tool-match-index');
+        });
+        previewHoverElement = null;
+        previewSelectedElement = null;
+    }
+
+    function getPreviewXPathMatches(doc, xpath) {
+        const matches = [];
+        if (!doc || !xpath) return matches;
+
+        try {
+            const result = doc.evaluate(xpath, doc, null, XPathResult.ANY_TYPE, null);
+
+            if (result.resultType === XPathResult.STRING_TYPE ||
+                result.resultType === XPathResult.NUMBER_TYPE ||
+                result.resultType === XPathResult.BOOLEAN_TYPE) {
+                return matches;
+            }
+
+            if (result.resultType === XPathResult.ANY_UNORDERED_NODE_TYPE ||
+                result.resultType === XPathResult.FIRST_ORDERED_NODE_TYPE) {
+                if (result.singleNodeValue) matches.push(result.singleNodeValue);
+                return matches;
+            }
+
+            let current = result.iterateNext();
+            while (current) {
+                matches.push(current);
+                current = result.iterateNext();
+            }
+        } catch (error) {
+            return [];
+        }
+
+        return matches;
+    }
+
+    function getPreviewMatchesFromInputs() {
+        const doc = getPreviewDocument();
+        if (!doc) return [];
+        const selector = cssInput.value.trim();
+        const xpath = xpathInput.value.trim();
+
+        try {
+            return withCleanPreviewDom(doc, () => {
+                if (selector) return Array.from(doc.querySelectorAll(selector));
+                if (xpath) return getPreviewXPathMatches(doc, xpath);
+                return [];
+            });
+        } catch (error) {
+            return [];
+        }
+    }
+
+    function syncPreviewMatchesFromInputs() {
+        if (!isPreviewMode) return;
+
+        const doc = getPreviewDocument();
+        if (!doc) return;
+
+        clearPreviewMatchMarks();
+
+        const uniqueElements = [];
+        const seen = new Set();
+
+        getPreviewMatchesFromInputs().forEach(node => {
+            const anchor = getSelectorAnchor(node);
+            const element = getPreviewSelectableElement(anchor || node);
+            if (!element || seen.has(element)) return;
+            seen.add(element);
+            uniqueElements.push(element);
+        });
+
+        uniqueElements.forEach((element, index) => {
+            element.classList.add('__selector_tool_match__');
+            element.setAttribute('data-selector-tool-match-index', String(index + 1));
+        });
+
+        if (previewSelectedElement && !seen.has(previewSelectedElement)) {
+            previewSelectedElement.classList.remove('__selector_tool_selected__');
+            previewSelectedElement = null;
+        }
+
+        if (cssInput.value.trim() || xpathInput.value.trim()) {
+            previewHint.textContent = i18n[currentLang].previewMatched.replace('{count}', uniqueElements.length);
+        } else {
+            previewHint.textContent = i18n[currentLang].previewHint;
+        }
+    }
+
+    function getPreviewSelectableElement(target) {
+        if (!target || target.nodeType !== Node.ELEMENT_NODE) return null;
+        const tag = target.tagName ? target.tagName.toLowerCase() : '';
+        if (tag === 'html') return target.body || target;
+        return target;
+    }
+
+    function getCssMatchIndexInDoc(doc, selector, element) {
+        if (!doc || !selector || !element) return 0;
+        try {
+            return withCleanPreviewDom(doc, () => {
+                const index = Array.from(doc.querySelectorAll(selector)).indexOf(element);
+                return index >= 0 ? index : 0;
+            });
+        } catch (error) {
+            return 0;
+        }
+    }
+
+    function getXPathMatchIndexInDoc(doc, xpath, element) {
+        if (!doc || !xpath || !element) return 0;
+        try {
+            return withCleanPreviewDom(doc, () => {
+                const result = doc.evaluate(xpath, doc, null, XPathResult.ORDERED_NODE_ITERATOR_TYPE, null);
+                const matches = [];
+                let current = result.iterateNext();
+                while (current) {
+                    matches.push(current);
+                    current = result.iterateNext();
+                }
+                const index = matches.indexOf(element);
+                return index >= 0 ? index : 0;
+            });
+        } catch (error) {
+            return 0;
+        }
+    }
+
+    function applySelectorFromPreview(element) {
+        const doc = getPreviewDocument();
+        if (!doc || !element) return;
+
+        const cssSelector = buildElementCssSelector(element, doc);
+        const xpathSelector = buildElementXPath(element, doc);
+        let selectedIndex = 0;
+
+        ensureCurrentDocument();
+
+        try {
+            if (cssSelector && currentDoc && currentDoc.querySelectorAll(cssSelector).length > 0) {
+                selectedIndex = getCssMatchIndexInDoc(doc, cssSelector, element);
+                cssInput.value = cssSelector;
+                xpathInput.value = '';
+                cssError.textContent = '';
+                xpathError.textContent = '';
+                runCSS();
+            } else if (xpathSelector) {
+                selectedIndex = getXPathMatchIndexInDoc(doc, xpathSelector, element);
+                xpathInput.value = xpathSelector;
+                cssInput.value = '';
+                cssError.textContent = '';
+                xpathError.textContent = '';
+                runXPath();
+            }
+        } catch (error) {
+            if (xpathSelector) {
+                selectedIndex = getXPathMatchIndexInDoc(doc, xpathSelector, element);
+                xpathInput.value = xpathSelector;
+                cssInput.value = '';
+                cssError.textContent = '';
+                xpathError.textContent = '';
+                runXPath();
+            }
+        }
+
+        setTimeout(() => {
+            if (currentResults.length > 0) {
+                selectResult(Math.min(selectedIndex, currentResults.length - 1), {
+                    forceView: false,
+                    scrollEditor: false,
+                    scrollCard: true
+                });
+            }
+        }, 0);
+
+        showToast(i18n[currentLang].previewSelected);
+    }
+
+    function attachPreviewHandlers() {
+        const doc = getPreviewDocument();
+        if (!doc || !doc.body) {
+            previewHint.textContent = i18n[currentLang].previewLoadFailed;
+            return;
+        }
+        if (previewHandlerDocs.has(doc)) return;
+        previewHandlerDocs.add(doc);
+        previewHint.textContent = i18n[currentLang].previewHint;
+
+        doc.addEventListener('mouseover', event => {
+            const target = getPreviewSelectableElement(event.target);
+            if (!target) return;
+
+            if (previewHoverElement && previewHoverElement !== previewSelectedElement) {
+                previewHoverElement.classList.remove('__selector_tool_hover__');
+            }
+
+            previewHoverElement = target;
+            if (previewHoverElement !== previewSelectedElement) {
+                previewHoverElement.classList.add('__selector_tool_hover__');
+            }
+        }, true);
+
+        doc.addEventListener('mouseout', event => {
+            const target = getPreviewSelectableElement(event.target);
+            if (!target || target !== previewHoverElement || target === previewSelectedElement) return;
+            target.classList.remove('__selector_tool_hover__');
+            previewHoverElement = null;
+        }, true);
+
+        doc.addEventListener('click', event => {
+            const target = getPreviewSelectableElement(event.target);
+            if (!target) return;
+
+            event.preventDefault();
+            event.stopPropagation();
+
+            if (previewSelectedElement) {
+                previewSelectedElement.classList.remove('__selector_tool_selected__');
+            }
+            if (previewHoverElement && previewHoverElement !== target) {
+                previewHoverElement.classList.remove('__selector_tool_hover__');
+            }
+
+            previewSelectedElement = target;
+            previewSelectedElement.classList.remove('__selector_tool_hover__');
+            previewSelectedElement.classList.add('__selector_tool_selected__');
+            applySelectorFromPreview(target);
+        }, true);
+    }
+
+    function renderPreview() {
+        if (!ensureCurrentDocument()) {
+            renderEmptyState(i18n[currentLang].inputPrompt);
+            return;
+        }
+
+        clearPreviewMarks();
+        previewHint.textContent = i18n[currentLang].previewHint;
+        previewFrame.onload = () => {
+            attachPreviewHandlers();
+            syncPreviewMatchesFromInputs();
+        };
+        previewFrame.srcdoc = sanitizeHtmlForPreview(rawInput.value);
+        setTimeout(() => {
+            attachPreviewHandlers();
+            syncPreviewMatchesFromInputs();
+        }, 80);
+    }
+
+    function setPreviewMode(enabled) {
+        const t = i18n[currentLang];
+        isPreviewMode = enabled;
+
+        if (enabled) {
+            isViewMode = false;
+            clearEditorHighlights();
+            viewerContainer.classList.remove('active');
+            rawInput.style.display = 'none';
+            previewContainer.classList.add('active');
+            document.getElementById('btn-format').textContent = t.format;
+            document.getElementById('btn-preview').textContent = t.visualPickActive;
+            renderPreview();
+            return;
+        }
+
+        clearPreviewMarks();
+        previewContainer.classList.remove('active');
+        previewFrame.removeAttribute('srcdoc');
+        document.getElementById('btn-preview').textContent = t.visualPick;
+        if (!isViewMode) {
+            rawInput.style.display = 'block';
+        }
+    }
+
+    function togglePreviewMode() {
+        if (isPreviewMode) {
+            setPreviewMode(false);
+            return;
+        }
+        if (!rawInput.value.trim()) return;
+        setPreviewMode(true);
+    }
+
+    function renderXPathScalarResult(value, valueType) {
+        resultList.innerHTML = '';
+        currentResults = [];
+        updateHitCountText(0);
+        resetResultState();
+        clearEditorHighlights();
+        syncPreviewMatchesFromInputs();
+
+        const item = document.createElement('div');
+        item.className = 'result-item';
+
+        const header = document.createElement('div');
+        header.className = 'item-header';
+
+        const label = document.createElement('div');
+        label.className = 'item-tag';
+        label.textContent = `${i18n[currentLang].xpathValueLabel} (${valueType})`;
+
+        const actions = document.createElement('div');
+        actions.className = 'item-actions';
+        actions.appendChild(createActionButton(i18n[currentLang].copyValue, () => copyText(String(value), i18n[currentLang].copiedValue)));
+
+        header.appendChild(label);
+        header.appendChild(actions);
+
+        const content = document.createElement('div');
+        content.className = 'item-text';
+        content.textContent = String(value);
+
+        item.appendChild(header);
+        item.appendChild(content);
+        resultList.appendChild(item);
+    }
+
+    function renderResults(nodes) {
+        const normalizedNodes = Array.from(nodes || []);
+        resultList.innerHTML = '';
+        currentResults = normalizedNodes;
+        updateHitCountText(normalizedNodes.length);
+        resetResultState();
+
+        if (normalizedNodes.length === 0) {
+            renderEmptyState(i18n[currentLang].noMatches);
+            return;
+        }
+
+        currentResultIndex = 0;
+        const fragment = document.createDocumentFragment();
+
+        normalizedNodes.forEach((node, index) => {
+            const item = document.createElement('div');
+            item.className = 'result-item';
+            resultCards.push(item);
+
+            item.addEventListener('mouseenter', () => previewResult(index));
+            item.addEventListener('mouseleave', () => clearPreviewResult(index));
+            item.addEventListener('click', () => selectResult(index, { forceView: true, scrollEditor: true, scrollCard: false }));
+
+            const header = document.createElement('div');
+            header.className = 'item-header';
+
+            const label = document.createElement('div');
+            label.className = 'item-tag';
+            label.textContent = `${getNodeLabel(node)} #${index + 1}`;
+
+            const actions = document.createElement('div');
+            actions.className = 'item-actions';
+
+            const cssSelector = buildNodeCssSelector(node);
+            if (cssSelector) {
+                actions.appendChild(createActionButton(i18n[currentLang].copyCss, () => copyText(cssSelector, i18n[currentLang].copiedCss)));
+            }
+
+            const xpathSelector = buildNodeXPath(node);
+            if (xpathSelector) {
+                actions.appendChild(createActionButton(i18n[currentLang].copyXpath, () => copyText(xpathSelector, i18n[currentLang].copiedXpath)));
+            }
+
+            header.appendChild(label);
+            header.appendChild(actions);
+
+            const breadcrumb = document.createElement('div');
+            breadcrumb.className = 'item-breadcrumb';
+            breadcrumb.textContent = getNodeBreadcrumb(node);
+
+            item.appendChild(header);
+            item.appendChild(breadcrumb);
+
+            const previewText = truncateText(getNodePreviewText(node), 100);
+            if (previewText) {
+                const preview = document.createElement('div');
+                preview.className = 'item-text';
+                preview.textContent = previewText;
+                item.appendChild(preview);
+            }
+
+            if (node.nodeType === Node.ELEMENT_NODE && node.attributes) {
+                const attrs = Array.from(node.attributes).filter(attr =>
+                    ['id', 'class', 'href', 'src', 'name', 'type'].includes(attr.name) || attr.name.startsWith('data-')
+                );
+
+                if (attrs.length > 0) {
+                    const attrWrap = document.createElement('div');
+                    attrWrap.className = 'item-attrs';
+
+                    attrs.forEach(attr => {
+                        const badge = document.createElement('span');
+                        badge.className = 'attr-badge';
+                        badge.textContent = `${attr.name}=`;
+
+                        const value = document.createElement('span');
+                        value.className = 'attr-value';
+                        value.textContent = `"${attr.value}"`;
+
+                        badge.appendChild(value);
+                        attrWrap.appendChild(badge);
+                    });
+
+                    item.appendChild(attrWrap);
+                }
+            }
+
+            renderPlaywrightBlock(item, node, index, normalizedNodes.length, cssSelector, xpathSelector);
+
+            const toggle = document.createElement('div');
+            toggle.className = 'toggle-code-btn';
+            toggle.textContent = i18n[currentLang].showHide;
+
+            const code = document.createElement('div');
+            code.className = 'item-code';
+            code.textContent = truncateCode(getNodeMarkup(node), 500);
+
+            toggle.addEventListener('click', event => {
+                event.stopPropagation();
+                code.classList.toggle('visible');
+            });
+
+            item.appendChild(toggle);
+            item.appendChild(code);
+            fragment.appendChild(item);
+        });
+
+        resultList.appendChild(fragment);
+        syncResultCardState();
+        restoreLockedHighlight();
+        syncPreviewMatchesFromInputs();
+    }
+
+    function evaluateXPath(xpath) {
+        const result = currentDoc.evaluate(xpath, currentDoc, null, XPathResult.ANY_TYPE, null);
+
+        if (result.resultType === XPathResult.STRING_TYPE) {
+            return { kind: 'scalar', valueType: 'string', value: result.stringValue };
+        }
+
+        if (result.resultType === XPathResult.NUMBER_TYPE) {
+            return { kind: 'scalar', valueType: 'number', value: result.numberValue };
+        }
+
+        if (result.resultType === XPathResult.BOOLEAN_TYPE) {
+            return { kind: 'scalar', valueType: 'boolean', value: result.booleanValue };
+        }
+
+        if (result.resultType === XPathResult.ANY_UNORDERED_NODE_TYPE || result.resultType === XPathResult.FIRST_ORDERED_NODE_TYPE) {
+            return { kind: 'nodes', nodes: result.singleNodeValue ? [result.singleNodeValue] : [] };
+        }
+
+        const nodes = [];
+        let current = result.iterateNext();
+        while (current) {
+            nodes.push(current);
+            current = result.iterateNext();
+        }
+
+        return { kind: 'nodes', nodes };
+    }
+
+    function runCSS() {
+        cssError.textContent = '';
+        const selector = cssInput.value.trim();
+
+        if (!selector) {
+            renderEmptyState(i18n[currentLang].inputPrompt);
+            return;
+        }
+
+        if (!ensureCurrentDocument()) {
+            renderEmptyState(i18n[currentLang].inputPrompt);
+            return;
+        }
+
+        try {
+            renderResults(Array.from(currentDoc.querySelectorAll(selector)));
+        } catch (error) {
+            cssError.textContent = i18n[currentLang].invalidCss;
+            renderResults([]);
+        }
+    }
+
+    function runXPath() {
+        xpathError.textContent = '';
+        const xpath = xpathInput.value.trim();
+
+        if (!xpath) {
+            renderEmptyState(i18n[currentLang].inputPrompt);
+            return;
+        }
+
+        if (!ensureCurrentDocument()) {
+            renderEmptyState(i18n[currentLang].inputPrompt);
+            return;
+        }
+
+        try {
+            const outcome = evaluateXPath(xpath);
+            if (outcome.kind === 'scalar') {
+                renderXPathScalarResult(outcome.value, outcome.valueType);
+                return;
+            }
+            renderResults(outcome.nodes);
+        } catch (error) {
+            xpathError.textContent = i18n[currentLang].invalidXpath;
+            renderResults([]);
+        }
+    }
+
+    function parseHtmlContent() {
+        if (!ensureCurrentDocument()) {
+            renderEmptyState(i18n[currentLang].inputPrompt);
+            return;
+        }
+
+        if (cssInput.value.trim()) {
+            runCSS();
+            return;
+        }
+
+        if (xpathInput.value.trim()) {
+            runXPath();
+            return;
+        }
+
+        renderEmptyState(i18n[currentLang].inputPrompt);
+    }
+
+    function handleFileUpload(input) {
+        const file = input.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = event => {
+            const content = String(event.target.result ?? '');
+            rawInput.value = content;
+            rawHtml = content;
+            parseHtmlContent();
+
+            if (isPreviewMode) {
+                renderPreview();
+            } else if (isViewMode) {
+                formatAndShow();
+            } else {
+                setViewMode(true);
+            }
+        };
+        reader.readAsText(file);
+    }
+
+    function clearAll() {
+        rawHtml = '';
+        currentDoc = null;
+        currentResults = [];
+        nodeLineMap.clear();
+        rawInput.value = '';
+        cssInput.value = '';
+        xpathInput.value = '';
+        cssError.textContent = '';
+        xpathError.textContent = '';
+        document.getElementById('file-upload').value = '';
+        modal.classList.remove('active');
+        setPreviewMode(false);
+        setViewMode(false);
+        renderEmptyState(i18n[currentLang].inputPrompt);
+    }
+
+    function toggleFullScreen() {
+        if (modal.classList.contains('active')) {
+            modal.classList.remove('active');
+            return;
+        }
+
+        const editor = ensureCodeMirror('modal-cm-target');
+        let content = rawInput.value;
+        if (ensureCurrentDocument()) {
+            content = formatDom(currentDoc);
+        }
+
+        modal.classList.add('active');
+        editor.setValue(content);
+        setTimeout(() => editor.refresh(), 30);
+    }
+
+    function toggleTheme() {
+        const root = document.documentElement;
+        const button = document.getElementById('theme-btn');
+        currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
+
+        if (currentTheme === 'light') {
+            root.setAttribute('data-theme', 'light');
+            button.textContent = '\u2600\ufe0f';
+        } else {
+            root.removeAttribute('data-theme');
+            button.textContent = '\ud83c\udf19';
+        }
+
+        const themeName = currentTheme === 'dark' ? 'darcula' : 'neo';
+        if (cmEditor) cmEditor.setOption('theme', themeName);
+        if (modalEditor) modalEditor.setOption('theme', themeName);
+    }
+
+    function changeLang(lang) {
+        currentLang = lang;
+        const t = i18n[lang];
+
+        document.documentElement.lang = lang === 'zh' ? 'zh' : 'en';
+        document.title = t.appTitle;
+        document.querySelector('.logo span').textContent = t.title;
+        document.getElementById('btn-format').textContent = isViewMode ? t.edit : t.format;
+        document.getElementById('btn-preview').textContent = isPreviewMode ? t.visualPickActive : t.visualPick;
+        document.getElementById('btn-clear').textContent = t.clear;
+        document.getElementById('btn-upload').textContent = t.upload;
+        document.querySelector('label[for="css-input"]').textContent = t.cssLabel;
+        document.querySelector('label[for="xpath-input"]').textContent = t.xpathLabel;
+        document.getElementById('results-title').textContent = t.results;
+        document.getElementById('btn-close-modal').textContent = t.close;
+        resultHint.textContent = t.resultHint;
+        previewHint.textContent = t.previewHint;
+        resultPrevBtn.title = t.prevResult;
+        resultPrevBtn.setAttribute('aria-label', t.prevResult);
+        resultNextBtn.title = t.nextResult;
+        resultNextBtn.setAttribute('aria-label', t.nextResult);
+        rawInput.placeholder = t.inputPlaceholder;
+        cssInput.placeholder = t.cssPlaceholder;
+        xpathInput.placeholder = t.xpathPlaceholder;
+
+        if (cssInput.value.trim()) {
+            runCSS();
+            return;
+        }
+
+        if (xpathInput.value.trim()) {
+            runXPath();
+            return;
+        }
+
+        renderEmptyState(t.inputPrompt);
+    }
+
+    function isTypingTarget(target) {
+        if (!target) return false;
+        const tagName = target.tagName;
+        if (tagName === 'INPUT' || tagName === 'TEXTAREA' || tagName === 'SELECT') return true;
+        if (target.isContentEditable) return true;
+        return Boolean(target.closest && target.closest('.CodeMirror'));
+    }
+
+    function setResizeShield(enabled) {
+        // In visual preview mode, the iframe can capture mousemove events while dragging left.
+        // Temporarily disable iframe pointer events so the parent document keeps receiving drag events.
+        if (previewFrame) {
+            previewFrame.style.pointerEvents = enabled ? 'none' : '';
+        }
+    }
+
+    resizer.addEventListener('mousedown', () => {
+        if (window.innerWidth <= 768) return;
+        isResizing = true;
+        resizer.classList.add('resizing');
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+        setResizeShield(true);
+    });
+
+    document.addEventListener('mousemove', event => {
+        if (!isResizing) return;
+
+        const containerWidth = mainContainer.offsetWidth;
+        const minWidth = 520;
+        const maxWidth = Math.max(minWidth, containerWidth - 220);
+        let newLeftWidth = event.clientX - mainContainer.getBoundingClientRect().left;
+
+        newLeftWidth = Math.min(Math.max(newLeftWidth, minWidth), maxWidth);
+        leftPanel.style.width = `${(newLeftWidth / containerWidth) * 100}%`;
+    });
+
+    function stopResizing() {
+        if (!isResizing) {
+            setResizeShield(false);
+            return;
+        }
+        isResizing = false;
+        resizer.classList.remove('resizing');
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+        setResizeShield(false);
+    }
+
+    document.addEventListener('mouseup', stopResizing);
+    window.addEventListener('blur', stopResizing);
+
+    document.addEventListener('keydown', event => {
+        if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return;
+        if (isTypingTarget(document.activeElement)) return;
+        if (currentResults.length === 0) return;
+
+        event.preventDefault();
+        moveResult(event.key === 'ArrowUp' ? -1 : 1);
+    });
+
+    resultPrevBtn.addEventListener('click', () => moveResult(-1));
+    resultNextBtn.addEventListener('click', () => moveResult(1));
+
+    modal.addEventListener('click', event => {
+        if (event.target === modal) {
+            modal.classList.remove('active');
+        }
+    });
+
+    const debouncedParseHtml = debounce(parseHtmlContent, 500);
+    const debouncedRunCSS = debounce(runCSS, 300);
+    const debouncedRunXPath = debounce(runXPath, 300);
+
+    rawInput.addEventListener('input', debouncedParseHtml);
+
+    cssInput.addEventListener('input', () => {
+        xpathInput.value = '';
+        xpathError.textContent = '';
+        debouncedRunCSS();
+    });
+
+    xpathInput.addEventListener('input', () => {
+        cssInput.value = '';
+        cssError.textContent = '';
+        debouncedRunXPath();
+    });
+
+    function init() {
+        document.getElementById('lang-select').value = currentLang;
+        document.getElementById('theme-btn').textContent = '\ud83c\udf19';
+        changeLang(currentLang);
+    }
+
+    init();
+</script>
+</body>
+</html>
