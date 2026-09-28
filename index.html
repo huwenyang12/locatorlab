@@ -689,6 +689,24 @@ Unauthorized copying, redistribution, or commercial use is prohibited.
             word-break: break-word;
         }
 
+        .item-playwright-row {
+            display: flex;
+            align-items: baseline;
+            flex-wrap: wrap;
+            gap: 6px 10px;
+            margin-top: 6px;
+        }
+
+        .item-playwright-label {
+            min-width: 36px;
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+
+        .item-playwright-row .item-playwright-code {
+            flex: 1 1 220px;
+        }
+
 
         .preview-container {
             width: 100%;
@@ -1029,6 +1047,7 @@ Unauthorized copying, redistribution, or commercial use is prohibited.
             copyPlaywrightWait: 'Copy Wait',
             copyPlaywrightClick: 'Copy Click',
             copyPlaywrightRole: 'Copy Role',
+            copyXpathLocator: 'Copy XPath Locator',
             copiedPlaywright: 'Playwright snippet copied.',
             copyFailed: 'Copy failed.'
         },
@@ -1073,6 +1092,7 @@ Unauthorized copying, redistribution, or commercial use is prohibited.
             copyPlaywrightWait: '\u590d\u5236\u7b49\u5f85',
             copyPlaywrightClick: '\u590d\u5236\u70b9\u51fb',
             copyPlaywrightRole: '\u590d\u5236 Role',
+            copyXpathLocator: '\u590d\u5236 XPath \u5b9a\u4f4d',
             copiedPlaywright: 'Playwright \u5199\u6cd5\u5df2\u590d\u5236\u3002',
             copyFailed: '\u590d\u5236\u5931\u8d25\u3002'
         }
@@ -1837,6 +1857,7 @@ Unauthorized copying, redistribution, or commercial use is prohibited.
     function renderPlaywrightBlock(item, node, index, total, cssSelector, xpathSelector) {
         const snippets = buildPlaywrightRecommendation(node, index, total, cssSelector, xpathSelector);
         if (!snippets.main) return;
+        const active = getActiveSelectorInfo(cssSelector, xpathSelector);
 
         const wrapper = document.createElement('div');
         wrapper.className = 'item-playwright';
@@ -1861,12 +1882,30 @@ Unauthorized copying, redistribution, or commercial use is prohibited.
         top.appendChild(title);
         top.appendChild(actions);
 
-        const code = document.createElement('div');
-        code.className = 'item-playwright-code';
-        code.textContent = snippets.main;
-
         wrapper.appendChild(top);
-        wrapper.appendChild(code);
+
+        function addLocatorRow(label, snippet, copyLabel) {
+            const row = document.createElement('div');
+            row.className = 'item-playwright-row';
+            const caption = document.createElement('span');
+            caption.className = 'item-playwright-label';
+            caption.textContent = label;
+            const code = document.createElement('div');
+            code.className = 'item-playwright-code';
+            code.textContent = snippet;
+            row.appendChild(caption);
+            row.appendChild(code);
+            if (copyLabel) {
+                row.appendChild(createActionButton(copyLabel, () => copyText(snippet, i18n[currentLang].copiedPlaywright)));
+            }
+            wrapper.appendChild(row);
+        }
+
+        addLocatorRow(active?.type === 'xpath' ? 'XPath' : 'CSS', snippets.main);
+        if (node.nodeType === Node.ELEMENT_NODE && xpathSelector) {
+            const xpathLocator = buildPlaywrightLocator({ type: 'xpath', selector: xpathSelector }, 0, 1);
+            if (xpathLocator !== snippets.main) addLocatorRow('XPath', xpathLocator, i18n[currentLang].copyXpathLocator);
+        }
         item.appendChild(wrapper);
     }
 

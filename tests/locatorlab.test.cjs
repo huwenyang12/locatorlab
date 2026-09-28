@@ -59,3 +59,17 @@ test('role suggestions use an input label instead of its current value', async (
   assert.equal(snippet, 'page.get_by_role("textbox", name="Email address")');
   await page.close();
 });
+
+test('visual selection shows CSS and XPath Playwright locators separately', async () => {
+  const page = await openApp();
+  await page.locator('#raw-input').fill('<button id="save">Save</button>');
+  await page.locator('#btn-preview').click();
+  await page.locator('#preview-frame').contentFrame().locator('#save').click();
+  const rows = page.locator('.result-item .item-playwright-row');
+  await rows.nth(1).waitFor();
+  assert.deepEqual(await rows.locator('.item-playwright-label').allTextContents(), ['CSS', 'XPath']);
+  assert.equal(await rows.nth(0).locator('.item-playwright-code').textContent(), 'page.locator("#save")');
+  assert.equal(await rows.nth(1).locator('.item-playwright-code').textContent(), 'page.locator("xpath=//*[@id=\'save\']")');
+  assert.equal(await rows.nth(1).locator('button').textContent(), 'Copy XPath Locator');
+  await page.close();
+});
