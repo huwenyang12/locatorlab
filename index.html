@@ -2,7 +2,7 @@
 <!--
 LocatorLab
 Author: WenYang
-Copyright © 2026 WenYang. All rights reserved.
+Copyright © 2026 wenyang. All rights reserved.
 Unauthorized copying, redistribution, or commercial use is prohibited.
 -->
 <html lang="en">
@@ -11,8 +11,9 @@ Unauthorized copying, redistribution, or commercial use is prohibited.
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="author" content="WenYang">
-    <meta name="copyright" content="Copyright © 2026 WenYang. All rights reserved.">
-    <title>LocatorLab — CSS, XPath &amp; Playwright Selector Debugger</title>
+    <meta name="copyright" content="Copyright © 2026 wenyang. All rights reserved.">
+    <title>locatorlab</title>
+    <link rel="icon" type="image/png" href="/favicon.png?v=1">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/darcula.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/neo.min.css">
@@ -88,6 +89,7 @@ Unauthorized copying, redistribution, or commercial use is prohibited.
             display: flex;
             align-items: center;
         }
+
 
         .header-select,
         .header-btn {
@@ -577,7 +579,7 @@ Unauthorized copying, redistribution, or commercial use is prohibited.
 
         .item-selector-row {
             display: grid;
-            grid-template-columns: 54px minmax(0, 1fr) auto;
+            grid-template-columns: 54px minmax(0, 1fr) auto auto;
             align-items: start;
             gap: 10px;
             padding: 8px 10px;
@@ -640,6 +642,16 @@ Unauthorized copying, redistribution, or commercial use is prohibited.
         .item-playwright-top .item-action-btn {
             border-radius: 6px;
             white-space: nowrap;
+        }
+
+        .item-selector-row .item-action-btn {
+            min-width: 50px;
+        }
+
+        .item-selector-row .item-action-btn.ai-active {
+            border-color: var(--accent-color);
+            background: rgba(0, 122, 204, 0.16);
+            color: var(--accent-color);
         }
 
         .item-breadcrumb {
@@ -951,7 +963,7 @@ Unauthorized copying, redistribution, or commercial use is prohibited.
             }
 
             .item-selector-row {
-                grid-template-columns: 44px minmax(0, 1fr) auto;
+                grid-template-columns: 44px minmax(0, 1fr) auto auto;
                 gap: 6px;
             }
         }
@@ -986,7 +998,7 @@ Unauthorized copying, redistribution, or commercial use is prohibited.
                 <option value="zh">&#20013;&#25991;</option>
             </select>
             <button id="theme-btn" class="header-btn" onclick="toggleTheme()">&#127769;</button>
-            <span class="version">version 1.6.0 · © 2026 WenYang</span>
+            <span class="version">v 1.6.0</span>
         </div>
     </header>
 
@@ -1091,7 +1103,7 @@ Unauthorized copying, redistribution, or commercial use is prohibited.
             name: 'LocatorLab',
             author: 'WenYang',
             version: '1.6.0',
-            copyright: 'Copyright © 2026 WenYang. All rights reserved.',
+            copyright: 'Copyright © 2026 wenyang. All rights reserved.',
             notice: 'Unauthorized copying, redistribution, or commercial use is prohibited.'
         });
 
@@ -1113,11 +1125,13 @@ Unauthorized copying, redistribution, or commercial use is prohibited.
         let previewResultIndex = -1;
         let toastTimer = null;
         let resultCards = [];
+        const aiSelections = new Map();
+        let aiRequestVersion = 0;
         const previewHandlerDocs = new WeakSet();
 
         const i18n = {
             en: {
-                appTitle: 'LocatorLab — CSS, XPath & Playwright Selector Debugger',
+                appTitle: 'locatorlab',
                 title: 'LocatorLab',
                 format: 'Format HTML',
                 edit: 'Edit HTML',
@@ -1129,6 +1143,14 @@ Unauthorized copying, redistribution, or commercial use is prohibited.
                 previewSelected: 'Selector generated from preview.',
                 previewMatchFailed: 'Could not match this preview element to the source HTML.',
                 previewLoadFailed: 'Preview failed to load.',
+                aiButton: 'AI',
+                aiButtonHint: 'Generate and toggle the AI selector for this element.',
+                aiLoading: '…',
+                aiAnalyzing: 'AI is generating selectors…',
+                aiApplied: 'Verified AI selectors are ready.',
+                aiFallback: 'No valid AI selector found. Showing local selectors.',
+                aiUnavailable: 'AI request failed. Showing local selectors.',
+                generatedSelectorsAi: 'Generated selectors · AI assisted',
                 previewMatched: 'Preview highlighted {count} matched element(s).',
                 cssLabel: 'CSS Selector',
                 xpathLabel: 'XPath',
@@ -1178,6 +1200,14 @@ Unauthorized copying, redistribution, or commercial use is prohibited.
                 previewSelected: '\u5df2\u6839\u636e\u9884\u89c8\u70b9\u9009\u751f\u6210\u9009\u62e9\u5668\u3002',
                 previewMatchFailed: '\u65e0\u6cd5\u5728\u539f\u59cb HTML \u4e2d\u786e\u8ba4\u8be5\u9884\u89c8\u5143\u7d20\u3002',
                 previewLoadFailed: '\u9884\u89c8\u52a0\u8f7d\u5931\u8d25\u3002',
+                aiButton: 'AI',
+                aiButtonHint: '为该元素生成或切换 AI 定位。',
+                aiLoading: '…',
+                aiAnalyzing: 'AI 正在生成定位…',
+                aiApplied: 'AI 定位已通过验证。',
+                aiFallback: 'AI 未生成有效定位，已显示本地定位。',
+                aiUnavailable: 'AI 请求失败，已显示本地定位。',
+                generatedSelectorsAi: '生成的选择器 · AI 辅助',
                 previewMatched: '\u9884\u89c8\u533a\u5df2\u6846\u51fa {count} \u4e2a\u547d\u4e2d\u5143\u7d20\u3002',
                 cssLabel: 'CSS \u9009\u62e9\u5668',
                 xpathLabel: 'XPath',
@@ -1883,10 +1913,11 @@ Unauthorized copying, redistribution, or commercial use is prohibited.
             return button;
         }
 
-        function appendSelectorRow(container, label, selector, copyLabel, successMessage) {
+        function appendSelectorRow(container, label, selector, copyLabel, successMessage, node, type) {
             if (!selector) return;
             const row = document.createElement('div');
             row.className = 'item-selector-row';
+            row.addEventListener('click', event => event.stopPropagation());
 
             const caption = document.createElement('span');
             caption.className = 'item-selector-label';
@@ -1900,7 +1931,12 @@ Unauthorized copying, redistribution, or commercial use is prohibited.
             copy.title = copyLabel;
             copy.setAttribute('aria-label', copyLabel);
 
-            row.append(caption, code, copy);
+            const ai = createActionButton(isAiPending(type, node) ? i18n[currentLang].aiLoading : i18n[currentLang].aiButton, () => toggleAiSelector(node, type));
+            ai.title = i18n[currentLang].aiButtonHint;
+            ai.setAttribute('aria-label', `${label} ${i18n[currentLang].aiButtonHint}`);
+            ai.setAttribute('aria-pressed', String(Boolean(getAiSelector(type, node))));
+            ai.classList.toggle('ai-active', Boolean(getAiSelector(type, node)));
+            row.append(caption, code, ai, copy);
             container.appendChild(row);
         }
 
@@ -1935,10 +1971,14 @@ Unauthorized copying, redistribution, or commercial use is prohibited.
             return JSON.stringify(String(value ?? ''));
         }
 
-        function getActiveSelectorInfo(cssSelector, xpathSelector) {
+        function getActiveSelectorInfo(cssSelector, xpathSelector, node = null) {
             const typedCss = cssInput.value.trim();
             const typedXpath = xpathInput.value.trim();
 
+            const aiCss = getAiSelector('css', node);
+            const aiXpath = getAiSelector('xpath', node);
+            if (aiCss) return { type: 'css', selector: aiCss };
+            if (aiXpath) return { type: 'xpath', selector: aiXpath };
             if (typedCss) return { type: 'css', selector: typedCss };
             if (typedXpath) return { type: 'xpath', selector: typedXpath };
             if (cssSelector) return { type: 'css', selector: cssSelector };
@@ -1968,6 +2008,126 @@ Unauthorized copying, redistribution, or commercial use is prohibited.
                 return index < 0 ? null : { index, total: matches.length };
             } catch (error) {
                 return null;
+            }
+        }
+
+        function cancelAiRequest({ clearSelection = true } = {}) {
+            if (!clearSelection) return;
+            aiRequestVersion++;
+            aiSelections.forEach(entry => entry.controller?.abort());
+            aiSelections.clear();
+        }
+
+        function getAiSelector(type, node) {
+            const entry = aiSelections.get(getSelectorAnchor(node));
+            return entry?.active[type] ? entry[type] || '' : '';
+        }
+
+        function isAiPending(type, node) {
+            const entry = aiSelections.get(getSelectorAnchor(node));
+            return Boolean(entry?.active[type] && entry.controller);
+        }
+
+        function refreshAiResult() {
+            const nodes = currentResults.slice();
+            const scrollTop = resultList.scrollTop;
+            const selectedIndex = currentResultIndex;
+            const lockedIndex = lockedResultIndex;
+            renderResults(nodes);
+            currentResultIndex = selectedIndex;
+            lockedResultIndex = lockedIndex;
+            syncResultCardState();
+            restoreLockedHighlight();
+            resultList.scrollTop = scrollTop;
+        }
+
+        async function toggleAiSelector(node, type) {
+            const element = getSelectorAnchor(node);
+            if (!element || element.nodeType !== Node.ELEMENT_NODE) return;
+            let entry = aiSelections.get(element);
+            if (entry?.active[type]) {
+                entry.active[type] = false;
+                refreshAiResult();
+                return;
+            }
+            if (!entry) {
+                entry = { css: '', xpath: '', active: { css: false, xpath: false }, controller: null, promise: null, loaded: false };
+                aiSelections.set(element, entry);
+            }
+            entry.active[type] = true;
+            refreshAiResult();
+            if (entry.loaded) {
+                if (!entry[type]) {
+                    entry.active[type] = false;
+                    showToast(i18n[currentLang].aiFallback);
+                    refreshAiResult();
+                }
+                return;
+            }
+            if (!entry.promise) entry.promise = requestAiSelectors(element, entry);
+            await entry.promise;
+        }
+
+        function buildAiContext(element) {
+            const attributes = Object.fromEntries(Array.from(element.attributes, attr => [attr.name, attr.value]));
+            return {
+                target: {
+                    tag: element.tagName.toLowerCase(),
+                    text: getNormalizedElementText(element).slice(0, 200),
+                    attributes,
+                    outerHTML: element.outerHTML.slice(0, 4000)
+                },
+                html: (element.parentElement || element).outerHTML.slice(0, 12000)
+            };
+        }
+
+        async function requestAiSelectors(element, entry) {
+            const version = aiRequestVersion;
+            const doc = currentDoc;
+            const controller = new AbortController();
+            entry.controller = controller;
+            const timeoutId = setTimeout(() => controller.abort(), 25000);
+            try {
+                const response = await fetch('/api/ai-locator', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(buildAiContext(element)),
+                    signal: controller.signal
+                });
+                if (!response.ok) throw new Error(`AI HTTP ${response.status}`);
+                const data = await response.json();
+                if (version !== aiRequestVersion || currentDoc !== doc || aiSelections.get(element) !== entry) return;
+                const verified = { css: '', xpath: '' };
+                for (const candidate of Array.isArray(data.candidates) ? data.candidates : []) {
+                    if (!candidate || !['css', 'xpath'].includes(candidate.type) || typeof candidate.value !== 'string') continue;
+                    const selector = candidate.value.trim();
+                    if (!selector || selector.length > 1000 || verified[candidate.type]) continue;
+                    const match = getSelectorMatchPosition({ type: candidate.type, selector }, element);
+                    if (match?.total === 1) verified[candidate.type] = selector;
+                }
+                entry.css = verified.css;
+                entry.xpath = verified.xpath;
+                entry.loaded = true;
+                for (const type of ['css', 'xpath']) {
+                    if (entry.active[type] && !entry[type]) {
+                        entry.active[type] = false;
+                        showToast(i18n[currentLang].aiFallback);
+                    }
+                }
+            } catch (error) {
+                if (version === aiRequestVersion && aiSelections.get(element) === entry) {
+                    entry.active.css = false;
+                    entry.active.xpath = false;
+                    aiSelections.delete(element);
+                    if (error.name !== 'AbortError') showToast(i18n[currentLang].aiUnavailable);
+                }
+            } finally {
+                clearTimeout(timeoutId);
+                if (version === aiRequestVersion && aiSelections.get(element) === entry) {
+                    entry.controller = null;
+                    entry.promise = null;
+                    if (currentResults.some(node => getSelectorAnchor(node) === element)) refreshAiResult();
+                }
             }
         }
 
@@ -2017,7 +2177,7 @@ Unauthorized copying, redistribution, or commercial use is prohibited.
 
         function buildPlaywrightRecommendation(node, index, total, cssSelector, xpathSelector) {
             const anchor = getSelectorAnchor(node);
-            const active = getActiveSelectorInfo(cssSelector, xpathSelector);
+            const active = getActiveSelectorInfo(cssSelector, xpathSelector, anchor);
             const position = getSelectorMatchPosition(active, node);
             const main = position ? buildPlaywrightLocator(active, position.index, position.total) : '';
             const result = {
@@ -2043,7 +2203,7 @@ Unauthorized copying, redistribution, or commercial use is prohibited.
         function renderPlaywrightBlock(item, node, index, total, cssSelector, xpathSelector) {
             const snippets = buildPlaywrightRecommendation(node, index, total, cssSelector, xpathSelector);
             if (!snippets.main) return;
-            const active = getActiveSelectorInfo(cssSelector, xpathSelector);
+            const active = getActiveSelectorInfo(cssSelector, xpathSelector, getSelectorAnchor(node));
 
             const wrapper = document.createElement('div');
             wrapper.className = 'item-playwright';
@@ -2280,6 +2440,8 @@ Unauthorized copying, redistribution, or commercial use is prohibited.
         function applySelectorFromPreview(element) {
             if (!getPreviewDocument() || !element || !ensureCurrentDocument()) return;
 
+            cancelAiRequest();
+
             const sourceIndex = element.getAttribute('data-selector-tool-source-index');
             const sourceElement = sourceIndex !== null && /^\d+$/.test(sourceIndex)
                 ? currentDoc.querySelectorAll('*')[Number(sourceIndex)]
@@ -2406,6 +2568,7 @@ Unauthorized copying, redistribution, or commercial use is prohibited.
                 return;
             }
 
+            cancelAiRequest({ clearSelection: false });
             clearPreviewMarks();
             previewContainer.classList.remove('active');
             previewFrame.removeAttribute('srcdoc');
@@ -2488,8 +2651,8 @@ Unauthorized copying, redistribution, or commercial use is prohibited.
                 const label = document.createElement('div');
                 label.className = 'item-tag';
                 label.textContent = `${getNodeLabel(node)} #${index + 1}`;
-                const cssSelector = buildNodeCssSelector(node);
-                const xpathSelector = buildNodeXPath(node);
+                const cssSelector = getAiSelector('css', node) || buildNodeCssSelector(node);
+                const xpathSelector = getAiSelector('xpath', node) || buildNodeXPath(node);
                 header.appendChild(label);
 
                 const breadcrumb = document.createElement('div');
@@ -2536,11 +2699,12 @@ Unauthorized copying, redistribution, or commercial use is prohibited.
                 if (cssSelector || xpathSelector) {
                     const title = document.createElement('div');
                     title.className = 'item-section-title';
-                    title.textContent = i18n[currentLang].generatedSelectors;
+                    title.textContent = getAiSelector('css', node) || getAiSelector('xpath', node)
+                        ? i18n[currentLang].generatedSelectorsAi : i18n[currentLang].generatedSelectors;
                     const selectors = document.createElement('div');
                     selectors.className = 'item-selector-list';
-                    appendSelectorRow(selectors, 'CSS', cssSelector, i18n[currentLang].copyCss, i18n[currentLang].copiedCss);
-                    appendSelectorRow(selectors, 'XPath', xpathSelector, i18n[currentLang].copyXpath, i18n[currentLang].copiedXpath);
+                    appendSelectorRow(selectors, 'CSS', cssSelector, i18n[currentLang].copyCss, i18n[currentLang].copiedCss, node, 'css');
+                    appendSelectorRow(selectors, 'XPath', xpathSelector, i18n[currentLang].copyXpath, i18n[currentLang].copiedXpath, node, 'xpath');
                     item.append(title, selectors);
                 }
 
@@ -2673,6 +2837,7 @@ Unauthorized copying, redistribution, or commercial use is prohibited.
 
             const reader = new FileReader();
             reader.onload = event => {
+                cancelAiRequest();
                 const content = String(event.target.result ?? '');
                 rawInput.value = content;
                 currentDoc = null;
@@ -2690,6 +2855,7 @@ Unauthorized copying, redistribution, or commercial use is prohibited.
         }
 
         function clearAll() {
+            cancelAiRequest();
             rawHtml = '';
             currentDoc = null;
             currentResults = [];
@@ -2859,19 +3025,25 @@ Unauthorized copying, redistribution, or commercial use is prohibited.
         const debouncedRunCSS = debounce(runCSS, 300);
         const debouncedRunXPath = debounce(runXPath, 300);
 
-        rawInput.addEventListener('input', debouncedParseHtml);
+        rawInput.addEventListener('input', () => {
+            cancelAiRequest();
+            debouncedParseHtml();
+        });
 
         cssInput.addEventListener('input', () => {
+            cancelAiRequest();
             xpathInput.value = '';
             xpathError.textContent = '';
             debouncedRunCSS();
         });
 
         xpathInput.addEventListener('input', () => {
+            cancelAiRequest();
             cssInput.value = '';
             cssError.textContent = '';
             debouncedRunXPath();
         });
+
 
         function init() {
             document.getElementById('lang-select').value = currentLang;
