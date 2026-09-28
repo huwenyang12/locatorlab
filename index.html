@@ -1771,33 +1771,23 @@ Unauthorized copying, redistribution, or commercial use is prohibited.
         return (element.textContent || '').replace(/\s+/g, ' ').trim();
     }
 
-    function removeCommonFileSuffix(text) {
-        return String(text || '').replace(/\.(docx?|xlsx?|pptx?|pdf|txt|zip|rar|7z|png|jpe?g|gif|csv)$/i, '');
-    }
-
-    function getFlexibleTextCandidate(text) {
-        let value = removeCommonFileSuffix(String(text || '').replace(/\s+/g, ' ').trim());
-        if (!value) return '';
-
-        const splitBy = ['：', ':', '，', ',', '。', '、', '|', '-', '—', '_'];
-        for (const mark of splitBy) {
-            const part = value.split(mark)[0].trim();
-            if (part.length >= 6) {
-                value = part;
-                break;
-            }
+    function getRoleNameCandidate(element) {
+        const labelledBy = (element.getAttribute('aria-labelledby') || '').trim();
+        if (labelledBy) {
+            const labels = labelledBy.split(/\s+/).map(id => element.ownerDocument.getElementById(id));
+            if (labels.every(Boolean)) return labels.map(getNormalizedElementText).join(' ').replace(/\s+/g, ' ').trim();
         }
-
-        if (value.length > 24) {
-            value = value.slice(0, 24);
+        const ariaLabel = (element.getAttribute('aria-label') || '').trim();
+        if (ariaLabel) return ariaLabel;
+        if (element.labels?.length) {
+            const label = Array.from(element.labels).map(getNormalizedElementText).join(' ').replace(/\s+/g, ' ').trim();
+            if (label) return label;
         }
-        return value;
-    }
-
-    function getCompactElementText(element) {
-        const text = getNormalizedElementText(element);
-        if (!text || text.length > 40) return '';
-        return text;
+        const tag = element.tagName.toLowerCase();
+        const type = (element.getAttribute('type') || '').toLowerCase();
+        if (tag === 'input' && ['button', 'submit', 'reset'].includes(type)) return element.getAttribute('value') || '';
+        if (tag === 'button' || tag === 'a') return getNormalizedElementText(element);
+        return '';
     }
 
     function inferPlaywrightRole(element) {
@@ -1834,11 +1824,7 @@ Unauthorized copying, redistribution, or commercial use is prohibited.
         if (!anchor || anchor.nodeType !== Node.ELEMENT_NODE) return result;
 
         const role = inferPlaywrightRole(anchor);
-        const compactText = getCompactElementText(anchor);
-        const ariaLabel = anchor.getAttribute('aria-label') || '';
-        const valueText = anchor.getAttribute('value') || '';
-        const inputValue = anchor.tagName.toLowerCase() === 'input' ? valueText : '';
-        const nameText = getFlexibleTextCandidate(ariaLabel || inputValue || compactText || valueText);
+        const nameText = getRoleNameCandidate(anchor);
 
         if (role && nameText) {
             result.role = `page.get_by_role(${toPythonString(role)}, name=${toPythonString(nameText)})`;
@@ -1897,7 +1883,12 @@ Unauthorized copying, redistribution, or commercial use is prohibited.
         const parser = new DOMParser();
         const doc = parser.parseFromString(html, 'text/html');
 
-        doc.querySelectorAll('script').forEach(script => script.remove());
+        const policy = doc.createElement('meta');
+        policy.setAttribute('http-equiv', 'Content-Security-Policy');
+        policy.setAttribute('content', "default-src 'none'; style-src 'unsafe-inline'; img-src data: blob:; font-src data:");
+        doc.head.insertBefore(policy, doc.head.firstChild);
+
+        doc.querySelectorAll('script, meta[http-equiv="refresh"]').forEach(element => element.remove());
         doc.querySelectorAll('*').forEach(element => {
             Array.from(element.attributes).forEach(attr => {
                 const attrName = attr.name.toLowerCase();
@@ -2512,7 +2503,7 @@ Unauthorized copying, redistribution, or commercial use is prohibited.
         reader.onload = event => {
             const content = String(event.target.result ?? '');
             rawInput.value = content;
-            rawHtml = content;
+            currentDoc = null;
             parseHtmlContent();
 
             if (isPreviewMode) {

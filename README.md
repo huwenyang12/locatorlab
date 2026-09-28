@@ -20,7 +20,7 @@
 
 ## 使用方式
 
-无需安装依赖，也无需启动后端服务。
+无需安装项目依赖，也无需启动后端服务。代码编辑器使用 CDN 加载的 CodeMirror，使用格式化视图时需要能够访问 CDN。
 
 直接使用浏览器打开 `index.html` 即可。
 
@@ -32,6 +32,8 @@
 4. 点击结果查看对应 DOM 位置
 5. 复制 CSS、XPath 或 Playwright 定位代码
 6. 也可以进入可视化点选模式，直接点击页面元素生成选择器
+
+预览用于调试静态 HTML 快照：其中的脚本不会运行，外部图片、样式等资源不会加载。动态生成的页面内容需先复制渲染后的 HTML。Playwright Role 写法是参考建议，复制后请在目标页面验证定位结果。
 
 ## 使用示例
 
@@ -68,7 +70,7 @@ locatorlab 是一个纯前端单文件工具，主要使用：
 - JavaScript
 - CodeMirror 5
 
-项目不依赖 Node.js、Python 或其他后端环境，可以直接在浏览器本地运行。
+工具本身不依赖 Node.js、Python 或其他后端环境，可以直接在浏览器本地运行。仓库中的浏览器回归测试需要 Node.js：执行 `npm install`、`npx playwright install chromium`、`npm test`。
 
 ## 项目结构
 
@@ -76,6 +78,8 @@ locatorlab 是一个纯前端单文件工具，主要使用：
 locatorlab/
 ├─ index.html
 ├─ README.md
+├─ package.json
+└─ tests/
 ```
 
 ## 更新记录
