@@ -35,13 +35,16 @@ test('a second upload replaces the document used by CSS and XPath searches', asy
 
 test('visual preview does not request remote resources embedded in pasted HTML', async () => {
   const page = await openApp();
-  const requests = [];
-  page.on('request', request => { if (request.url().includes('example.com/tracker')) requests.push(request.url()); });
+  const networkAttempts = [];
+  await page.route('https://example.com/tracker**', route => {
+    networkAttempts.push(route.request().url());
+    return route.abort();
+  });
   await page.locator('#raw-input').fill('<link rel="stylesheet" href="https://example.com/tracker.css"><style>body{background:url(https://example.com/tracker-bg.png)}</style><img src="https://example.com/tracker.png">');
   await page.locator('#btn-preview').click();
   await page.locator('#preview-frame').contentFrame().locator('img').waitFor();
   await page.waitForTimeout(250);
-  assert.deepEqual(requests, []);
+  assert.deepEqual(networkAttempts, []);
   await page.close();
 });
 
