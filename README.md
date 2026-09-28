@@ -11,7 +11,7 @@
 - XPath 调试
 - 可视化点选页面元素
 - HTML 格式化与预览
-- 自动生成 Playwright Locator、Wait、Click、Role 写法
+- 自动生成 Playwright Locator、Wait、Click、Role 写法，点选元素时同时展示 CSS 与 XPath Locator
 - 查看元素文本、属性、DOM 路径与源码
 - 支持匹配结果高亮、锁定与上下跳转
 - 支持 HTML 文件上传
