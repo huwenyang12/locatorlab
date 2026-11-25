@@ -106,6 +106,13 @@ AI 定位接口：
 POST /api/ai-locator
 ```
 
+## AI 使用注意事项与故障排查
+
+- AI 优化会将目标元素信息及相关 HTML 通过后端发送给 DeepSeek API。请勿提交包含账号、令牌、客户信息或其他敏感数据的 HTML；必要时先脱敏，或仅使用本地定位功能。
+- API Key 仅保存在本地 `.env` 文件中，不要将其写入前端代码或提交到 Git 仓库。项目已通过 `.gitignore` 排除 `.env`。
+- 如果 AI 功能不可用，先访问 `http://127.0.0.1:8000/api/health`。返回 `{"status":"ok"}` 表示后端服务已启动，但不代表 DeepSeek 接口或 API Key 已验证成功。
+- 如果健康检查正常但 AI 请求失败，检查 `.env` 中的 API Key、模型名称及后端访问 DeepSeek API 的网络连接。
+
 ## 基本使用流程
 
 1. 粘贴 HTML 源码，或上传 `.html`、`.htm`、`.txt` 文件
